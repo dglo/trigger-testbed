@@ -1,6 +1,0 @@
-sps-DeepCore-WaterFlasherTest-HLC-V157
-    old in-ice skipped (rc8d2ebcc4f2bb981fd9eea1b82af4cb11-iit-r120151-h15-p1000.dat exists)
-    old in-ice skipped (rc8d2ebcc4f2bb981fd9eea1b82af4cb11-iit-r120151-h15-p32800.dat exists)
-    old global skipped (rc8d2ebcc4f2bb981fd9eea1b82af4cb11-glbl-r120151-h1-p1000.dat exists)
-    old global 32800 hits 7 secs: wrote 0 payloads  
-    new in-ice 1000 hits 10 secs: compared 0 payloads  
