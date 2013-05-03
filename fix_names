@@ -1,0 +1,47 @@
+#!/bin/sh
+
+CLASSPATH=.
+for proj in testbed; do
+    jar="$proj/target/$proj-1.0.0-SNAPSHOT.jar"
+    if [ ! -f "$jar" ]; then
+        echo "$0: Cannot find $proj jar file $jar" >&2
+        exit 1
+    fi
+
+    CLASSPATH="$CLASSPATH:$jar"
+done
+
+ARGS="$@"
+
+for repo in log4j:log4j:1.2.7 commons-logging:commons-logging:1.0.4 \
+            org/xerial:sqlite-jdbc:3.7.2 dom4j:dom4j:1.6.1 jaxen:jaxen:1.1.1
+do
+    OLDIFS="$IFS"
+    IFS=":"
+
+    set -- $repo
+    proj="$1"
+    name="$2"
+    vers="$3"
+
+    IFS="$OLDIFS"
+
+    path="$HOME/.m2/repository/$proj/$name/$vers/$name-$vers.jar"
+    if [ ! -f "$path" ]; then
+        echo "$0: Jar file $path does not exist" >&2
+        exit 1
+    fi
+
+    CLASSPATH="$CLASSPATH:$path"
+done
+
+export CLASSPATH
+
+APP=icecube.daq.testbed.FixTrigDataNames
+#set `ls -t $APP.java $APP.class 2>/dev/null`
+#if [ "$1" != "$APP.class" ]; then
+#    javac -g $APP.java || exit 1
+#fi
+
+set -- $ARGS
+java -Xmx2000m $APP "$@"
