@@ -15,9 +15,6 @@ RUN_NUMBER = 120151
 # number of hits used for each set of tests
 TEST_NUM_HITS = (1000, 32800)
 
-# directory holding run configuration files
-CONFIG_DIR = os.path.join(os.environ["HOME"], "config")
-
 # directory holding simple hit files
 TARGET_DIR = os.path.join(os.environ["HOME"], "prj", "simplehits")
 
@@ -619,6 +616,9 @@ if __name__ == "__main__":
                  dest="cfglist", type="string",
                  help="One or more configurations to try" +
                       " (defaults to all configs)")
+    p.add_option("-D", "--config-dir", action="store",
+                 dest="config_dir", type="string",
+                 help="pDAQ configuration directory")
     p.add_option("-l", "--logfile", action="store",
                  dest="logfile", type="string",
                  help="Log file where output is written")
@@ -660,7 +660,14 @@ if __name__ == "__main__":
     else:
         num_hits_list = opt.num_hits
 
-    cfg_lister = RunConfigLister(CONFIG_DIR)
+    if opt.config_dir is not None:
+        cfgdir = opt.config_dir
+    elif os.environ.has_key("PDAQ_CONFIG"):
+        cfgdir = os.environ["PDAQ_CONFIG"]
+    else:
+        cfgdir = os.path.join(os.environ["HOME"], "config")
+
+    cfg_lister = RunConfigLister(cfgdir)
     if opt.cfglist is not None:
         for f in opt.cfglist:
             cfg_lister.add(f)
