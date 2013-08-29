@@ -315,13 +315,23 @@ public class TestBed
         }
 
         if (configDir == null) {
-            configDir = new File(System.getenv("HOME"), "config");
-            if (!configDir.isDirectory()) {
-                System.err.println("Cannot find default target directory " +
-                                   configDir);
-                System.err.println("Please specify config directory (-C)");
-                configDir = null;
-                usage = true;
+            String pcfg = System.getenv("PDAQ_CONFIG");
+            if (pcfg != null) {
+                configDir = new File(pcfg);
+                if (!configDir.exists()) {
+                    configDir = null;
+                }
+            }
+
+            if (configDir == null) {
+                configDir = new File(System.getenv("HOME"), "config");
+                if (!configDir.isDirectory()) {
+                    System.err.println("Cannot find default" +
+                                       " config directory " + configDir);
+                    System.err.println("Please specify config directory (-D)");
+                    configDir = null;
+                    usage = true;
+                }
             }
         }
 
