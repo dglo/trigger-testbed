@@ -143,6 +143,8 @@ public class CompareConsumer
                                           boolean ignoreLastTimeErrors,
                                           boolean reportError)
     {
+        final boolean mergeHack = false;
+
         if (checkUID && !compareInt("RReqUID", exp.getUID(), got.getUID(),
                                     reportError))
         {
@@ -168,7 +170,7 @@ public class CompareConsumer
             }
         } else {
             List merged;
-            if (expList.size() <= gotList.size()) {
+            if (!mergeHack || expList.size() <= gotList.size()) {
                 merged = expList;
             } else {
                 merged = mergeElements(expList);
@@ -258,7 +260,8 @@ public class CompareConsumer
 
     private boolean compareTriggerRequest(ITriggerRequestPayload exp,
                                           ITriggerRequestPayload got,
-                                          boolean reportError)
+                                          boolean reportError,
+                                          boolean reportLooseMatch)
     {
         if (!compareLong("UTCTime", exp.getUTCTime(), got.getUTCTime(),
                          reportError))
@@ -385,7 +388,8 @@ public class CompareConsumer
 
                             if (lookSimilar(expReq, gotReq) &&
                                 compareTriggerRequest(expReq, gotReq,
-                                                      reportTrigError))
+                                                      reportTrigError,
+                                                      reportLooseMatch))
                             {
                                 gotCopy.remove(j);
                                 found = true;
@@ -408,14 +412,18 @@ public class CompareConsumer
                             } else if (compareHit(expHit, gotHit, false,
                                                   false))
                             {
-                                final String fmt = "Loose match for hit %d:" +
-                                    " expected %s DOM %s, got %s DOM %s";
-                                LOG.error(String.format(fmt,
-                                                        expHit.getUTCTime(),
-                                                        expHit.getSourceID(),
-                                                        expHit.getDOMID(),
-                                                        gotHit.getSourceID(),
-                                                        gotHit.getDOMID()));
+                                if (reportLooseMatch) {
+                                    final String fmt = "Loose match for" +
+                                        " hit %d: expected %s DOM %s," +
+                                        " got %s DOM %s";
+                                    LOG.error(String.format(fmt,
+                                                            expHit.getUTCTime(),
+                                                            expHit.getSourceID(),
+                                                            expHit.getDOMID(),
+                                                            gotHit.getSourceID(),
+                                                            gotHit.getDOMID()));
+                                }
+
                                 gotCopy.remove(j);
                                 found = true;
                                 break;
@@ -457,6 +465,9 @@ public class CompareConsumer
     private boolean dumpPayloads(PrintStream out, ByteBuffer expBuf,
                                  ByteBuffer gotBuf, boolean compare)
     {
+        final boolean reportError = true;
+        final boolean reportLooseMatch = false;
+
         ITriggerRequestPayload exp = getPayload(expBuf);
         try {
             ITriggerRequestPayload got = getPayload(gotBuf);
@@ -472,7 +483,9 @@ public class CompareConsumer
                     return true;
                 }
 
-                if (!compare || !compareTriggerRequest(exp, got, true)) {
+                if (!compare || !compareTriggerRequest(exp, got, reportError,
+                                                       reportLooseMatch))
+                {
                     out.println("EXP ----\n" + getTrigReqString(exp));
                     out.println("GOT ----\n" + getTrigReqString(got));
 
