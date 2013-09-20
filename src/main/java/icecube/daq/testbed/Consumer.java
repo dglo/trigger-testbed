@@ -81,7 +81,7 @@ public abstract class Consumer
      */
     void foundMissed()
     {
-        numExtra++;
+        numMissed++;
     }
 
     /**
