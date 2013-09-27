@@ -480,6 +480,8 @@ public abstract class WrappedComponent
 
         comp.setRunNumber(runNum);
 
+        final double startTime = ((double) System.nanoTime()) / 1000000000.0;
+
         comp.starting();
 
         startComponentIO(comp.getReader(), comp.getWriter());
@@ -537,11 +539,13 @@ public abstract class WrappedComponent
 
         comp.stopped();
 
+        final double endTime = ((double) System.nanoTime()) / 1000000000.0;
+
         if (LOG.isInfoEnabled()) {
             LOG.info("Checking");
         }
 
-        boolean rtnval = consumer.report();
+        boolean rtnval = consumer.report(endTime - startTime);
 
         final boolean noOutput = consumer.getNumberWritten() == 0 &&
             consumer.getNumberFailed() == 0;

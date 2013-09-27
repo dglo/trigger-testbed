@@ -66,6 +66,9 @@ public class OutputConsumer
         throws IOException
     {
         buf.position(0);
+        if (buf.limit() >= 16) {
+            setLastUTCTime(buf.getLong(8));
+        }
 
         int numWritten = outChan.write(buf);
         if (numWritten != buf.limit()) {

@@ -134,7 +134,10 @@ public class CompareConsumer
     private boolean comparePayloads(PrintStream out, ByteBuffer expBuf,
                                     ByteBuffer gotBuf)
     {
-        return dumpPayloads(out, expBuf, gotBuf, true);
+        ITriggerRequestPayload exp = getPayload(expBuf);
+        ITriggerRequestPayload got = getPayload(gotBuf);
+        setLastUTCTime(got.getUTCTime());
+        return dumpPayloads(out, exp, got, true);
     }
 
     private boolean compareReadoutRequest(IReadoutRequest exp,
@@ -462,16 +465,13 @@ public class CompareConsumer
         }
     }
 
-    private boolean dumpPayloads(PrintStream out, ByteBuffer expBuf,
-                                 ByteBuffer gotBuf, boolean compare)
+    private boolean dumpPayloads(PrintStream out, ITriggerRequestPayload exp,
+                                 ITriggerRequestPayload got, boolean compare)
     {
         final boolean reportError = true;
         final boolean reportLooseMatch = false;
 
-        ITriggerRequestPayload exp = getPayload(expBuf);
         try {
-            ITriggerRequestPayload got = getPayload(gotBuf);
-
             try {
                 if (compare && (exp == null || got == null)) {
                     if (exp != got) {
@@ -534,6 +534,34 @@ public class CompareConsumer
         return pay;
     }
 
+    private String getRdoutReqString(IReadoutRequest rr, String indent)
+    {
+        StringBuilder buf = new StringBuilder();
+
+        if (rr == null) {
+            buf.append('\n').append(indent).
+                append("!!! NULL ReadoutRequest !!!");
+        } else {
+            List list;
+            try {
+                list = rr.getReadoutRequestElements();
+            } catch (Exception ex) {
+                buf.append('\n').append(indent).append(INDENT_STEP).
+                    append("Cannot get elements: ").append(ex);
+                list = null;
+            }
+
+            if (list != null) {
+                for (Object obj : list) {
+                    buf.append('\n').append(indent).append(INDENT_STEP).
+                        append(obj);
+                }
+            }
+        }
+
+        return buf.toString();
+    }
+
     private String getTrigReqString(ITriggerRequestPayload tr)
     {
         return getTrigReqString(tr, INDENT_STEP);
@@ -547,6 +575,7 @@ public class CompareConsumer
 
         StringBuilder buf = new StringBuilder(indent);
         buf.append(tr.toString());
+        buf.append(getRdoutReqString(tr.getReadoutRequest(), indent));
 
         List list;
         try {

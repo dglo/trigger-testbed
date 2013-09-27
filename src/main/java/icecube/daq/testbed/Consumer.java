@@ -31,6 +31,9 @@ public abstract class Consumer
     private boolean sawStop;
     private boolean forcedStop;
 
+    private long firstTime = Long.MIN_VALUE;
+    private long lastTime = Long.MIN_VALUE;
+
     /**
      * Create a consumer.
      *
@@ -142,9 +145,11 @@ public abstract class Consumer
     /**
      * Write a consumer report to the standard output.
      *
+     * @param clockSecs time required to process all the data
+     *
      * @return <tt>true</tt> if all payloads were found
      */
-    public boolean report()
+    public boolean report(double clockSecs)
     {
         String success;
         if (numWritten > 0) {
@@ -163,6 +168,17 @@ public abstract class Consumer
                             " failed") +
                            (forcedStop ? ", FORCED TO STOP" :
                             (sawStop ? "" : ", not stopped")));
+
+        if (firstTime != Long.MIN_VALUE && lastTime != Long.MIN_VALUE) {
+            final double daqTicksPerSec = 10000000000.0;
+
+            final double firstSecs = ((double) firstTime) / daqTicksPerSec;
+            final double lastSecs = ((double) lastTime) / daqTicksPerSec;
+
+            System.out.format("Processed %.2f seconds of data in" +
+                              " %.2f real seconds\n", lastSecs - firstSecs,
+                              clockSecs);
+        }
 
         return (numMissed == 0 && numFailed == 0 && !forcedStop);
     }
@@ -241,6 +257,15 @@ public abstract class Consumer
     public void setForcedStop()
     {
         forcedStop = true;
+    }
+
+    public void setLastUTCTime(long time)
+    {
+        if (firstTime == Long.MIN_VALUE) {
+            firstTime = time;
+        }
+
+        lastTime = time;
     }
 
     /**
