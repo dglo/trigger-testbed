@@ -371,13 +371,17 @@ public class TestBed
                 usage = true;
             }
 
-            if (numSrcs <= 0) {
+            if (maxSrcs <= 0) {
+                System.err.printf("Run configuration %s does not contain" +
+                                  " any entries for source ID #%d\n",
+                                  runCfg.getName(), comp.getSourceID());
+                usage = true;
+            } else if (numSrcs <= 0) {
                 numSrcs = maxSrcs;
             } else if (numSrcs > maxSrcs) {
-                System.err.println("Number of sources " + numSrcs +
-                                   " is greater than maximum " + maxSrcs +
-                                   " for " + comp.getName() + " from " +
-                                   runCfg.getName());
+                System.err.printf("Number of sources %d is greater than" +
+                                  " maximum %d for %s from %s\n", numSrcs,
+                                  maxSrcs, comp.getName(), runCfg.getName());
                 usage = true;
             }
         }
