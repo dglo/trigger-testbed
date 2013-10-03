@@ -340,8 +340,8 @@ public class Configuration
         stringHubs = new ArrayList<Integer>();
         icetopHubs = new ArrayList<Integer>();
 
-        List<Node> configNodes = doc.selectNodes("runConfig/domConfigList");
-        for (Node n : configNodes) {
+        List<Node> domConfigNodes = doc.selectNodes("runConfig/domConfigList");
+        for (Node n : domConfigNodes) {
             String hubStr = ((Element) n).attributeValue("hub");
             if (hubStr == null || hubStr.trim().length() == 0) {
                 throw new ConfigException("No hub specified for" +
@@ -369,6 +369,41 @@ public class Configuration
             } catch (NumberFormatException nfe) {
                 throw new ConfigException("Bad hub \"" + hubStr +
                                           "\" for domConfigList entry " +
+                                          getNodeText((Branch) n) +
+                                          " in run configuration file " +
+                                          file);
+            }
+        }
+
+        List<Node> stringHubNodes = doc.selectNodes("runConfig/stringHub");
+        for (Node n : stringHubNodes) {
+            String hubStr = ((Element) n).attributeValue("hubId");
+            if (hubStr == null || hubStr.trim().length() == 0) {
+                throw new ConfigException("No hubId specified for" +
+                                          " stringHub entry " +
+                                          getNodeText((Branch) n) +
+                                          " in run configuration file " +
+                                          file);
+            }
+
+            try {
+                int hub = Integer.parseInt(hubStr);
+
+                int loHub = hub % 1000;
+                if (loHub > 0 && loHub < 200) {
+                    stringHubs.add(hub);
+                } else if (loHub >= 200 && loHub < 300) {
+                    icetopHubs.add(hub);
+                } else {
+                    throw new ConfigException("Bad hubId " + hubStr +
+                                              " for stringHub entry " +
+                                              getNodeText((Branch) n) +
+                                              " in run configuration file " +
+                                              file);
+                }
+            } catch (NumberFormatException nfe) {
+                throw new ConfigException("Bad hubId \"" + hubStr +
+                                          "\" for stringHub entry " +
                                           getNodeText((Branch) n) +
                                           " in run configuration file " +
                                           file);
