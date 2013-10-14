@@ -65,7 +65,7 @@ public class OutputManager
 
     private void writePayload(IWriteablePayload payload)
     {
-        int bufLen = payload.getPayloadLength();
+        int bufLen = payload.length();
 
         // allocate ByteBuffer
         ByteBuffer buf;
