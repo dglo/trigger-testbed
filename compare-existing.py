@@ -1,28 +1,97 @@
 #!/usr/bin/env python
 #
-# Run trigger components with all run configurations
+# For all existing trigger testbed output files, run the current trigger
+# code and compare it against the previously saved data
 
 import os
+import re
+import sys
 
 from trigrunner import RunConfigLister, TriggerRunner
 
-
-# run number used for test data
-RUN_NUMBER = 120151
-
-# number of hits used for each set of tests
-TEST_NUM_HITS = (1000, 32800)
 
 # directory holding simple hit files
 TARGET_DIR = os.path.join(os.environ["HOME"], "prj", "simplehits")
 
 
+class DataFile(object):
+    def __init__(self, path, runcfg, comptype, run, hubs, hits):
+        self.__path = path
+        self.__runcfg = runcfg
+        self.__comptype = comptype
+        self.__run = run
+        self.__hubs = hubs
+        self.__hits = hits
+
+    def __str__(self):
+        return "%s-%s-r%d-h%d-p%d" % (self.__runcfg, self.__comp, self.__run,
+                                      self.__hubs, self.__hits)
+
+    def run(self, runner, log, target_dir, debug=False):
+        runner.run_one(log, target_dir, self.__runcfg, False, self.__comptype,
+                       self.__run, self.__hits, debug=debug)
+
+
+class DataFileLister(object):
+    PAT = re.compile("^rc([^-\s]+)-([^-\s]+)-r(\d+)-h(\d+)-p(\d+)\.dat$")
+
+    def __init__(self, datadir, cfg_lister):
+        self.__datadir = datadir
+        self.__cfghash = self.__build_hash(cfg_lister)
+
+    def __build_hash(self, cfg_lister):
+        cfghash = {}
+        for rc in cfg_lister.list():
+            if not cfghash.has_key(rc.hash()):
+                cfghash[rc.hash()] = rc
+            else:
+                print >>sys.stderr, "Collision: %s overrides %s" % \
+                    (cfghash[rc.hash()].name(), rc.name())
+        return cfghash
+
+    def list(self, inice_opt, icetop_opt, global_opt):
+        for f in os.listdir(self.__datadir):
+            m = self.PAT.match(f)
+            if m is None:
+                continue
+
+            rchash = m.group(1)
+
+            if not self.__cfghash.has_key(rchash):
+                continue
+
+            runcfg = self.__cfghash[rchash]
+            if runcfg.skip() or not runcfg.usable():
+                continue
+
+            comp = m.group(2)
+
+            if comp == "iit":
+                comptype = inice_opt
+                comp_in_cfg = runcfg.inice()
+            elif comp == "iit":
+                comptype = icetop_opt
+                comp_in_cfg = runcfg.icetop()
+            elif comp == "glbl":
+                comptype = global_opt
+                comp_in_cfg = True
+            if comptype is None:
+                continue
+            if not comp_in_cfg:
+                print "Ignoring %s (%s not in runcfg)" % (f, comp)
+                continue
+
+            path = os.path.join(self.__datadir, f)
+            run = int(m.group(3))
+            hubs = int(m.group(4))
+            hits = int(m.group(5))
+
+            yield DataFile(path, runcfg, comptype, run, hubs, hits)
+
+
 if __name__ == "__main__":
     import optparse
     p = optparse.OptionParser()
-    p.add_option("-a", "--always-run", action="store_true",
-                 dest="run_old", default=False,
-                 help="Run old trigger even if data file exists")
     p.add_option("-c", "--config", action="append",
                  dest="cfglist", type="string",
                  help="One or more configurations to try" +
@@ -33,9 +102,6 @@ if __name__ == "__main__":
     p.add_option("-l", "--logfile", action="store",
                  dest="logfile", type="string",
                  help="Log file where output is written")
-    p.add_option("-n", "--num-hits", action="append",
-                 dest="num_hits", type="int",
-                 help="Number of hits (can specify multiple numbers)")
     p.add_option("--no-global", action="store_true",
                  dest="no_global", default=False,
                  help="Do not run global trigger")
@@ -45,12 +111,6 @@ if __name__ == "__main__":
     p.add_option("--no-inice", action="store_true",
                  dest="no_inice", default=False,
                  help="Do not run in-ice trigger")
-    p.add_option("--no-new", action="store_true",
-                 dest="no_new", default=False,
-                 help="Do not run new trigger")
-    p.add_option("--no-old", action="store_true",
-                 dest="no_old", default=False,
-                 help="Do not run old trigger")
     p.add_option("-t", "--target-dir", action="store",
                  dest="target_dir", type="string", default=TARGET_DIR,
                  help="Directory holding simple hit data and" + \
@@ -67,11 +127,6 @@ if __name__ == "__main__":
     if len(args):
         raise SystemExit("Found extra command-line arguments: " + str(args))
 
-    if opt.num_hits is None or len(opt.num_hits) == 0:
-        num_hits_list = TEST_NUM_HITS
-    else:
-        num_hits_list = opt.num_hits
-
     if opt.config_dir is not None:
         cfgdir = opt.config_dir
     elif os.environ.has_key("PDAQ_CONFIG"):
@@ -83,19 +138,6 @@ if __name__ == "__main__":
     if opt.cfglist is not None:
         for f in opt.cfglist:
             cfg_lister.add(f)
-
-    if not opt.no_old and not opt.no_new:
-        old_new_list = (True, False)
-    else:
-        if opt.no_old:
-            old_opt = None
-        else:
-            old_opt = True
-        if opt.no_new:
-            new_opt = None
-        else:
-            new_opt = False
-        old_new_list = (old_opt, new_opt)
 
     if opt.no_inice:
         inice_opt = None
@@ -114,7 +156,7 @@ if __name__ == "__main__":
     runner = TriggerRunner()
 
     if opt.logfile is None:
-        logfile = "all-configs.log"
+        logfile = "cmp-configs.log"
     else:
         logfile = opt.logfile
 
@@ -125,10 +167,10 @@ if __name__ == "__main__":
 
     fd = open(logfile, "w")
 
+    dflister = DataFileLister(opt.target_dir, cfg_lister)
     try:
-        runner.run_all(fd, cfg_lister, opt.target_dir, old_new_list, type_list,
-                       RUN_NUMBER, num_hits_list, run_old=opt.run_old,
-                       verbose=opt.verbose, debug=opt.debug)
+        for df in dflister.list(inice_opt, icetop_opt, global_opt):
+            df.run(runner, fd, opt.target_dir, debug=opt.debug)
     finally:
         fd.close()
         runner.stop_threads()
