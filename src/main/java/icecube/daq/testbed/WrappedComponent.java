@@ -289,7 +289,7 @@ public abstract class WrappedComponent
             break;
         case SourceIdRegistry.ICETOP_TRIGGER_SOURCE_ID:
             hubName = "ithub";
-            hubBase = 200;
+            hubBase = SourceIdRegistry.ICETOP_ID_OFFSET;
             break;
         case SourceIdRegistry.GLOBAL_TRIGGER_SOURCE_ID:
             throw new Error("Cannot write hits into global trigger");
