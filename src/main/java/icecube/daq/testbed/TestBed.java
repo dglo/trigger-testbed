@@ -1,6 +1,7 @@
 package icecube.daq.testbed;
 
 import icecube.daq.common.ANSIEscapeCode;
+import icecube.daq.common.LocatePDAQ;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -186,8 +187,8 @@ public class TestBed
                         tmpLevel = Level.INFO;
                     } else if (args[i].equalsIgnoreCase("debug")) {
                         tmpLevel = Level.DEBUG;
-                    //} else if (args[i].equalsIgnoreCase("trace")) {
-                    //    tmpLevel = Level.TRACE;
+                        //} else if (args[i].equalsIgnoreCase("trace")) {
+                        //    tmpLevel = Level.TRACE;
                     } else if (args[i].equalsIgnoreCase("all")) {
                         tmpLevel = Level.ALL;
                     } else {
@@ -315,23 +316,12 @@ public class TestBed
         }
 
         if (configDir == null) {
-            String pcfg = System.getenv("PDAQ_CONFIG");
-            if (pcfg != null) {
-                configDir = new File(pcfg);
-                if (!configDir.exists()) {
-                    configDir = null;
-                }
-            }
-
-            if (configDir == null) {
-                configDir = new File(System.getenv("HOME"), "config");
-                if (!configDir.isDirectory()) {
-                    System.err.println("Cannot find default" +
-                                       " config directory " + configDir);
-                    System.err.println("Please specify config directory (-D)");
-                    configDir = null;
-                    usage = true;
-                }
+            try {
+                configDir = LocatePDAQ.findConfigDirectory();
+            } catch (IllegalArgumentException iae) {
+                System.err.println("Cannot find configuration directory");
+                System.err.println("Please specify config directory (-D)");
+                configDir = null;
             }
         }
 
