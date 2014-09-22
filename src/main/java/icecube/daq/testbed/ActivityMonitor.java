@@ -334,7 +334,7 @@ public class ActivityMonitor
         if (obj == null) {
             return "null";
         } else if (obj.getClass().isArray()) {
-            StringBuffer strBuf = new StringBuffer("[");
+            StringBuilder strBuf = new StringBuilder("[");
             final int len = Array.getLength(obj);
             for (int i = 0; i < len; i++) {
                 if (strBuf.length() > 1) {
@@ -345,7 +345,7 @@ public class ActivityMonitor
             strBuf.append("]");
             return strBuf.toString();
         } else if (obj.getClass().equals(HashMap.class)) {
-            StringBuffer strBuf = new StringBuffer("{");
+            StringBuilder strBuf = new StringBuilder("{");
             HashMap map = (HashMap) obj;
             for (Object key : map.keySet()) {
                 if (strBuf.length() > 1) {
