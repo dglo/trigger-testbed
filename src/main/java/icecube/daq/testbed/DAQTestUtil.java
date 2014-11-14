@@ -165,24 +165,8 @@ public abstract class DAQTestUtil
     }
 
     /**
-     * Connect a pipe to the payload reader and start the reader.
-     *
-     * @param rdr payload reader
-     * @param cache input buffer cache
-     *
-     * @return pipe to be used to send payloads to the reader
-     *
-     * @throws IOException if there is a problem
-     */
-    public static Pipe connectToReader(PayloadReader rdr,
-                                       IByteBufferCache cache)
-        throws IOException
-    {
-        return connectToReader(rdr, cache, true);
-    }
-
-    /**
-     * Connect one or more pipes to the payload reader and start the reader.
+     * Connect one or more pipes to the payload reader and optionally start
+     * the reader.
      *
      * @param rdr payload reader
      * @param cache input buffer cache
@@ -197,36 +181,10 @@ public abstract class DAQTestUtil
                                          int numTails)
         throws IOException
     {
-        return connectToReader(rdr, cache, numTails, true);
-    }
-
-    /**
-     * Connect one or more pipes to the payload reader and optionally start
-     * the reader.
-     *
-     * @param rdr payload reader
-     * @param cache input buffer cache
-     * @param numTails number of pipes to connect
-     * @param startReader <tt>true</tt> if the reader should be started
-     *
-     * @return list of pipes to be used to send payloads to the reader
-     *
-     * @throws IOException if there is a problem
-     */
-    public static Pipe[] connectToReader(PayloadReader rdr,
-                                         IByteBufferCache cache,
-                                         int numTails,
-                                         boolean startReader)
-        throws IOException
-    {
         Pipe[] chanList = new Pipe[numTails];
 
         for (int i = 0; i < chanList.length; i++) {
             chanList[i] = connectToReader(rdr, cache, false);
-        }
-
-        if (startReader) {
-            startIOProcess(rdr);
         }
 
         return chanList;
@@ -237,15 +195,13 @@ public abstract class DAQTestUtil
      *
      * @param rdr payload reader
      * @param cache input buffer cache
-     * @param startReader <tt>true</tt> if the reader should be started
      *
      * @return pipe to be used to send payloads to the reader
      *
      * @throws IOException if there is a problem
      */
     public static Pipe connectToReader(PayloadReader rdr,
-                                       IByteBufferCache cache,
-                                       boolean startReader)
+                                       IByteBufferCache cache)
         throws IOException
     {
         Pipe testPipe = Pipe.open();
@@ -259,10 +215,6 @@ public abstract class DAQTestUtil
         sourceChannel.configureBlocking(false);
 
         rdr.addDataChannel(sourceChannel, "rdrSink", cache, 1024);
-
-        if (startReader) {
-            startIOProcess(rdr);
-        }
 
         return testPipe;
     }
