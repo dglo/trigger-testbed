@@ -53,6 +53,16 @@ class SimpleHitFilter
     }
 
     /**
+     * Base filename
+     *
+     * @return filename
+     */
+    public String basename()
+    {
+        return baseName;
+    }
+
+    /**
      * Compare two objects.
      *
      * @param o1 first object
@@ -313,8 +323,9 @@ public abstract class WrappedComponent
             File[] files = srcDir.listFiles(filter);
             if (files.length == 0) {
                 String msg =
-                    String.format("Cannot find hit files for run %d %s %d",
-                                  runNum, hubName, hubs.get(h));
+                    String.format("Cannot find hit files for run %d %s %d" +
+                                  " (%s)", runNum, hubName, hubs.get(h),
+                                  filter.basename());
                 throw new IOException(msg);
             }
 
@@ -326,7 +337,7 @@ public abstract class WrappedComponent
             bridge.setNumberToSkip(numToSkip);
             bridge.setMaximumPayloads(numToProcess);
             bridge.setWriteDelay(1, 10);
-            bridge.start();
+            //bridge.start();
             bridges[h] = bridge;
         }
 
@@ -379,7 +390,7 @@ public abstract class WrappedComponent
             PayloadFileListBridge bridge =
                 new PayloadFileListBridge(files, tails[i].sink());
             bridge.setWriteDelay(1, 10);
-            bridge.start();
+            //bridge.start();
             bridges[i] = bridge;
         }
 
@@ -450,6 +461,7 @@ public abstract class WrappedComponent
         throws Exception
     {
         comp.setGlobalConfigurationDir(runCfg.getParent());
+        comp.setAlerter(new MockAlerter());
 
         comp.start(false);
         comp.configuring(runCfg.getName());
@@ -478,15 +490,14 @@ public abstract class WrappedComponent
             throw new Error("Output engine has no channels");
         }
 
-        comp.setRunNumber(runNum);
-
         final double startTime = ((double) System.nanoTime()) / 1000000000.0;
 
-        comp.starting();
+        comp.starting(runNum);
 
         startComponentIO(comp.getReader(), comp.getWriter());
+        startBridges(bridges);
 
-        comp.started();
+        comp.started(runNum);
 
         String prefix;
         if (getSourceID() == SourceIdRegistry.INICE_TRIGGER_SOURCE_ID) {
@@ -552,6 +563,20 @@ public abstract class WrappedComponent
         checkTriggerCaches(comp, noOutput, verbose);
 
         return rtnval;
+    }
+
+    /**
+     * Start the file bridges.
+     *
+     * @param bridges list of file bridges
+     */
+    public static void startBridges(PayloadFileListBridge[] bridges)
+    {
+        if (bridges != null) {
+            for (int i = 0; i < bridges.length; i++) {
+                bridges[i].start();
+            }
+        }
     }
 
     /**

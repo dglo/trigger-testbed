@@ -89,7 +89,7 @@ trigger components with a couple of different numbers of hits.  This takes a
 **LONG** time, so it only prints a brief report and saves the output of
 any failing runs to be examined later.
 
-This script tries to local output files associated with run
+This script tries to locate output files associated with run
 configuration files, so any changes to
 `icecube.daq.testbed.HashedFileName` must be mirrored in the code
 deep inside MyRunner.run_all()

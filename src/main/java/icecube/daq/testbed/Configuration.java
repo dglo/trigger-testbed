@@ -2,6 +2,8 @@ package icecube.daq.testbed;
 
 import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.payload.impl.TriggerRequest;
+import icecube.daq.util.JAXPUtil;
+import icecube.daq.util.JAXPUtilException;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -11,12 +13,10 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-import org.dom4j.Branch;
-import org.dom4j.Document;
-import org.dom4j.DocumentException;
-import org.dom4j.Element;
-import org.dom4j.Node;
-import org.dom4j.io.SAXReader;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 class ConfigException
     extends Exception
@@ -196,21 +196,32 @@ public class Configuration
     }
 
     /**
-     * Extract an integer value from all the text nodes in <tt>branch</tt>.
+     * Extract an integer value from all the text nodes in <tt>topNode</tt>.
      *
-     * @param branch XML document branch containing an integer string
+     * @param topNode XML document branch containing an integer string
+     * @param pathExpr XPath expression
      *
      * @return integer value
      */
-    public static int getNodeInteger(Branch branch)
+    public static int extractInteger(Node topNode, String pathExpr)
         throws ConfigException
     {
-        String intStr = getNodeText(branch);
+        String intStr;
         try {
-            return Integer.parseInt(intStr);
-        } catch (NumberFormatException nfe) {
-            throw new ConfigException("Bad integer value \"" + intStr + "\"");
+            intStr = JAXPUtil.extractText(topNode, pathExpr);
+        } catch (JAXPUtilException jex) {
+            throw new ConfigException(jex);
         }
+
+        if (intStr != null && intStr.length() > 0) {
+            try {
+                return Integer.parseInt(intStr);
+            } catch (NumberFormatException nfe) {
+                // throw exception below
+            }
+        }
+
+        throw new ConfigException("Bad integer value \"" + intStr + "\"");
     }
 
     /**
@@ -220,18 +231,27 @@ public class Configuration
      *
      * @return trimmed text string
      */
-    public static String getNodeText(Branch branch)
+    public static String getNodeText(Node branch)
     {
+        if (branch.getNodeType() != Node.ELEMENT_NODE) {
+            return "";
+        }
+
+        NodeList kids = branch.getChildNodes();
+        if (kids == null || kids.getLength() == 0) {
+            return "";
+        }
+
         StringBuilder str = new StringBuilder();
 
-        for (Iterator iter = branch.nodeIterator(); iter.hasNext(); ) {
-            Node node = (Node) iter.next();
+        for (int i = 0; i < kids.getLength(); i++) {
+            Node node = (Node) kids.item(i);
 
             if (node.getNodeType() != Node.TEXT_NODE) {
                 continue;
             }
 
-            str.append(node.getText());
+            str.append(node.getTextContent());
         }
 
         return str.toString().trim();
@@ -266,77 +286,49 @@ public class Configuration
     private void loadRunConfig()
         throws ConfigException
     {
-        FileInputStream in;
+        Document doc;
         try {
-            in = new FileInputStream(file);
-        } catch (IOException ioe) {
-            throw new ConfigException("Cannot open run configuration" +
-                                      " file \"" + file + "\"", ioe);
+            doc = JAXPUtil.loadXMLDocument(file);
+        } catch (JAXPUtilException de) {
+            throw new ConfigException("Cannot read run configuration" +
+                                      " file \"" + file + "\"", de);
         }
 
-        try {
-            SAXReader rdr = new SAXReader();
-            Document doc;
-            try {
-                doc = rdr.read(in);
-            } catch (DocumentException de) {
-                throw new ConfigException("Cannot read run configuration" +
-                                          " file \"" + file + "\"", de);
-            }
-
-            parseRunConfig(doc);
-        } finally {
-            try {
-                in.close();
-            } catch (IOException ioe) {
-                // ignore errors on close
-            }
-        }
+        parseRunConfig(doc);
     }
 
     private void loadTrigConfig(File file)
         throws ConfigException
     {
-        FileInputStream in;
+        Document doc;
         try {
-            in = new FileInputStream(file);
-        } catch (IOException ioe) {
-            throw new ConfigException("Cannot open run configuration" +
-                                      " file \"" + file + "\"", ioe);
+            doc = JAXPUtil.loadXMLDocument(file);
+        } catch (JAXPUtilException de) {
+            throw new ConfigException("Cannot read run configuration" +
+                                      " file \"" + file + "\"", de);
         }
 
-        try {
-            SAXReader rdr = new SAXReader();
-            Document doc;
-            try {
-                doc = rdr.read(in);
-            } catch (DocumentException de) {
-                throw new ConfigException("Cannot read run configuration" +
-                                          " file \"" + file + "\"", de);
-            }
-
-            parseTriggerConfig(doc);
-        } finally {
-            try {
-                in.close();
-            } catch (IOException ioe) {
-                // ignore errors on close
-            }
-        }
+        parseTriggerConfig(doc);
     }
 
     private void addHubs(Document doc, String listName, String name,
-                        ArrayList<Integer> stringHubs,
-                        ArrayList<Integer> icetopHubs)
+                         List<Integer> stringHubs, List<Integer> icetopHubs)
         throws ConfigException
     {
-        List<Node> nodes = doc.selectNodes("runConfig/" + listName);
-        for (Node n : nodes) {
-            String hubStr = ((Element) n).attributeValue(name);
+        NodeList nodes;
+        try {
+            nodes = JAXPUtil.extractNodeList(doc, "runConfig/" + listName);
+        } catch (JAXPUtilException jex) {
+            throw new ConfigException(jex);
+        }
+
+        for (int i = 0; i < nodes.getLength(); i++) {
+            Node n = nodes.item(i);
+            String hubStr = ((Element) n).getAttribute(name);
             if (hubStr == null || hubStr.trim().length() == 0) {
                 throw new ConfigException("No " + name + " specified for " +
                                           listName + " entry " +
-                                          getNodeText((Branch) n) +
+                                          n.getTextContent() +
                                           " in run configuration file " +
                                           file);
             }
@@ -344,21 +336,28 @@ public class Configuration
             try {
                 int hub = Integer.parseInt(hubStr);
 
-                if (SourceIdRegistry.isIniceHubSourceID(hub)) {
+                int srcHub;
+                if (hub > 1000) {
+                    srcHub = hub;
+                } else {
+                    srcHub = hub + SourceIdRegistry.STRING_HUB_SOURCE_ID;
+                }
+
+                if (SourceIdRegistry.isIniceHubSourceID(srcHub)) {
                     stringHubs.add(hub);
-                } else if (SourceIdRegistry.isIcetopHubSourceID(hub)) {
+                } else if (SourceIdRegistry.isIcetopHubSourceID(srcHub)) {
                     icetopHubs.add(hub);
                 } else {
                     throw new ConfigException("Bad " + name + " " + hub +
                                               " for " + listName + " entry " +
-                                              getNodeText((Branch) n) +
+                                              n.getTextContent() +
                                               " in run configuration file " +
                                               file);
                 }
             } catch (NumberFormatException nfe) {
                 throw new ConfigException("Bad hub \"" + hubStr +
                                           "\" for domConfigList entry " +
-                                          getNodeText((Branch) n) +
+                                          n.getTextContent() +
                                           " in run configuration file " +
                                           file);
             }
@@ -368,20 +367,25 @@ public class Configuration
     private void parseRunConfig(Document doc)
         throws ConfigException
     {
-        Node tcNode = doc.selectSingleNode("runConfig/triggerConfig");
-        if (tcNode == null) {
+        String tmpName;
+        try {
+            tmpName = JAXPUtil.extractText(doc, "runConfig/triggerConfig");
+        } catch (JAXPUtilException jex) {
+            tmpName = null;
+        }
+        if (tmpName == null) {
             throw new ConfigException("Run configuration file \"" +
                                       file + " does not contain" +
                                       " <triggerConfig>");
         }
 
-        trigCfgName = getNodeText((Branch) tcNode);
+        trigCfgName = tmpName;
 
         stringHubs = new ArrayList<Integer>();
         icetopHubs = new ArrayList<Integer>();
 
-        addHubs(n, "domConfigList", "hub", stringHubs, icetopHubs);
-        addHubs(n, "stringHub", "hubId", stringHubs, icetopHubs);
+        addHubs(doc, "domConfigList", "hub", stringHubs, icetopHubs);
+        addHubs(doc, "stringHub", "hubId", stringHubs, icetopHubs);
 
         Collections.sort(stringHubs);
         Collections.sort(icetopHubs);
@@ -392,10 +396,24 @@ public class Configuration
     {
         algorithmData = new ArrayList<AlgorithmData>();
 
-        List<Node> tcNodes = doc.selectNodes("activeTriggers/triggerConfig");
-        for (Node n : tcNodes) {
-            String name =
-                getNodeText((Branch) n.selectSingleNode("triggerName"));
+        NodeList tcNodes;
+        try {
+            tcNodes =
+                JAXPUtil.extractNodeList(doc, "activeTriggers/triggerConfig");
+        } catch (JAXPUtilException jex) {
+            throw new ConfigException(jex);
+        }
+
+        for (int i = 0; i < tcNodes.getLength(); i++) {
+            Node n = tcNodes.item(i);
+
+            String name;
+            try {
+                name = JAXPUtil.extractText(n, "triggerName");
+            } catch (JAXPUtilException jex) {
+                name = null;
+            }
+
             if (name == null || name.length() == 0) {
                 throw new ConfigException("Trigger configuration does not" +
                                           " specify a name in " + trigCfgName +
@@ -403,59 +421,58 @@ public class Configuration
             }
 
             int type;
-
-            String typeStr =
-                getNodeText((Branch) n.selectSingleNode("triggerType"));
             try {
-                type = Integer.parseInt(typeStr);
-            } catch (NumberFormatException nfe) {
-                throw new ConfigException("Bad trigger type \"" + typeStr +
-                                          " for " + name + " in " +
-                                          trigCfgName +
+                type = extractInteger(n, "triggerType");
+            } catch (ConfigException ce) {
+                throw new ConfigException("Bad trigger type for " + name +
+                                          " in " + trigCfgName +
                                           " from run configuration " + file);
             }
 
             int cfgId;
-
-            String cfgStr =
-                getNodeText((Branch) n.selectSingleNode("triggerConfigId"));
             try {
-                cfgId = Integer.parseInt(cfgStr);
-            } catch (NumberFormatException nfe) {
-                throw new ConfigException("Bad config ID \"" + cfgStr +
-                                          " for " + name + " in " +
-                                          trigCfgName +
+                cfgId = extractInteger(n, "triggerConfigId");
+            } catch (ConfigException ce) {
+                throw new ConfigException("Bad config ID for " + name +
+                                          " in " + trigCfgName +
                                           " from run configuration " + file);
             }
 
             int srcId;
-
-            String srcStr =
-                getNodeText((Branch) n.selectSingleNode("sourceId"));
             try {
-                srcId = Integer.parseInt(srcStr);
-            } catch (NumberFormatException nfe) {
-                throw new ConfigException("Bad source ID \"" + srcStr +
-                                          " for " + name + " in " +
-                                          trigCfgName +
+                srcId = extractInteger(n, "sourceId");
+            } catch (ConfigException ce) {
+                throw new ConfigException("Bad source ID for " + name +
+                                          " in " + trigCfgName +
                                           " from run configuration " + file);
             }
 
             if (false && name.startsWith("SimpleMajority")) {
                 int threshold = Integer.MIN_VALUE;
 
-                List<Node> pNodes = n.selectNodes("parameterConfig");
-                for (Node p : pNodes) {
-                    Branch nb = (Branch) p.selectSingleNode("parameterName");
-                    String pName = getNodeText(nb);
+                NodeList pNodes;
+                try {
+                    pNodes = JAXPUtil.extractNodeList(n, "parameterConfig");
+                } catch (JAXPUtilException jex) {
+                    throw new ConfigException(jex);
+                }
+
+                for (int j = 0; j < pNodes.getLength(); j++) {
+                    Node p = pNodes.item(j);
+
+                    String pName;
+                    try {
+                        pName = JAXPUtil.extractText(p, "parameterName");
+                    } catch (JAXPUtilException jex) {
+                        continue;
+                    }
                     if (pName == null || pName.length() == 0 ||
                         !pName.equals("threshold"))
                     {
                         continue;
                     }
 
-                    Branch tb = (Branch) p.selectSingleNode("parameterValue");
-                    threshold = getNodeInteger(tb);
+                    threshold = extractInteger(p, "parameterValue");
                     break;
                 }
 

@@ -6,7 +6,7 @@ import sys
 from runner import JavaRunner, jzmq_native_specifier
 
 # main class being run
-MAIN_CLASS = "icecube.daq.testbed.TestBed"
+MAIN_CLASS = "icecube.daq.testbed.TimeTrigger"
 
 # Java max memory
 JAVA_ARGS = "-Xmx4000m"

@@ -1,7 +1,7 @@
 package icecube.daq.testbed;
 
 import icecube.daq.common.ANSIEscapeCode;
-import icecube.daq.common.LocatePDAQ;
+import icecube.daq.util.LocatePDAQ;
 
 import java.io.BufferedReader;
 import java.io.File;

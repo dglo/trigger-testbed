@@ -184,7 +184,7 @@ public abstract class DAQTestUtil
         Pipe[] chanList = new Pipe[numTails];
 
         for (int i = 0; i < chanList.length; i++) {
-            chanList[i] = connectToReader(rdr, cache, false);
+            chanList[i] = connectToReader(rdr, cache);
         }
 
         return chanList;

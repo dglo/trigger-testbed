@@ -1,6 +1,5 @@
 package icecube.daq.testbed;
 
-import icecube.daq.oldtrigger.component.OldTriggerComponent;
 import icecube.daq.trigger.component.TriggerComponent;
 
 import java.lang.reflect.Constructor;
@@ -40,10 +39,6 @@ abstract class WrappedComponentFactory
         }
 
         Object obj = createObject(classObj);
-        if (obj instanceof OldTriggerComponent) {
-            return new OldComponent((OldTriggerComponent) obj);
-        }
-
         if (obj instanceof TriggerComponent) {
             return new NewComponent((TriggerComponent) obj);
         }
