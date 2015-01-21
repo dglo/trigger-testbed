@@ -15,7 +15,7 @@ public class MockAlerter
 
     public String getService()
     {
-        throw new Error("Unimplemented");
+        return DEFAULT_SERVICE;
     }
 
     public boolean isActive()
