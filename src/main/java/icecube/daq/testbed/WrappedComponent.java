@@ -337,7 +337,6 @@ public abstract class WrappedComponent
             bridge.setNumberToSkip(numToSkip);
             bridge.setMaximumPayloads(numToProcess);
             bridge.setWriteDelay(1, 10);
-            //bridge.start();
             bridges[h] = bridge;
         }
 
@@ -390,7 +389,6 @@ public abstract class WrappedComponent
             PayloadFileListBridge bridge =
                 new PayloadFileListBridge(files, tails[i].sink());
             bridge.setWriteDelay(1, 10);
-            //bridge.start();
             bridges[i] = bridge;
         }
 
