@@ -398,7 +398,7 @@ public abstract class DAQTestUtil
                        ", not Idle after " + action + extra, proc.isStopped());
         }
         if (splicer != null) {
-            assertTrue("Splicer in " + splicer.getStateString() +
+            assertTrue("Splicer in " + splicer.getState().name() +
                        ", not STOPPED after " + numReps + " reps of " +
                        action + extra,
                        splicer.getState() == Splicer.STOPPED);
