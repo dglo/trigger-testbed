@@ -134,7 +134,7 @@ public abstract class Consumer
      *
      * @param buf payload bytes
      *
-     * @returns <tt>true</tt> if this is a stop message
+     * @return <tt>true</tt> if this is a stop message
      */
     boolean isStopMessage(ByteBuffer buf)
     {
