@@ -164,7 +164,7 @@ public class Configuration
      *
      * @return list of hub IDs
      */
-    public List<Integer> getHubs(int srcId)
+    public Iterable<Integer> getHubs(int srcId)
         throws ConfigException
     {
         switch (srcId) {
