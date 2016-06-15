@@ -5,7 +5,7 @@ import icecube.daq.io.PayloadFileReader;
 import icecube.daq.payload.IPayload;
 import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.payload.impl.TriggerRequestFactory;
-import icecube.daq.trigger.algorithm.INewAlgorithm;
+import icecube.daq.trigger.algorithm.ITriggerAlgorithm;
 import icecube.daq.trigger.config.DomSetFactory;
 import icecube.daq.trigger.control.ITriggerCollector;
 import icecube.daq.trigger.exceptions.TriggerException;
@@ -46,9 +46,9 @@ public class TimeTrigger
 
     private static final String PKG_PREFIX = "icecube.daq.trigger.algorithm.";
 
-    private INewAlgorithm[] list;
+    private ITriggerAlgorithm[] list;
 
-    public TimeTrigger(INewAlgorithm[] list)
+    public TimeTrigger(ITriggerAlgorithm[] list)
     {
         this.list = list;
     }
@@ -81,7 +81,7 @@ public class TimeTrigger
 
         TriggerRequestFactory factory = new TriggerRequestFactory(null);
 
-        for (INewAlgorithm a : list) {
+        for (ITriggerAlgorithm a : list) {
             a.setSourceId(SourceIdRegistry.INICE_TRIGGER_SOURCE_ID);
             a.setTriggerConfigId(1007);
             a.setTriggerType(14);
@@ -134,7 +134,7 @@ public class TimeTrigger
             count++;
         }
 
-        for (INewAlgorithm a : list) {
+        for (ITriggerAlgorithm a : list) {
             a.flush();
         }
 
@@ -174,7 +174,7 @@ public class TimeTrigger
         Logger.getRootLogger().setLevel(Level.ERROR);
         APPENDER.setLevel(Level.ERROR);
 
-        ArrayList<INewAlgorithm> alist = new ArrayList<INewAlgorithm>();
+        ArrayList<ITriggerAlgorithm> alist = new ArrayList<ITriggerAlgorithm>();
         for (int i = 0; i < args.length; i++) {
             Class cls;
             try {
@@ -185,12 +185,12 @@ public class TimeTrigger
                 continue;
             }
 
-            INewAlgorithm algo;
+            ITriggerAlgorithm algo;
             try {
-                algo = (INewAlgorithm) cls.newInstance();
+                algo = (ITriggerAlgorithm) cls.newInstance();
             } catch (Exception ex) {
                 System.err.println("\"" + args[i] +
-                                   "\" is not an INewAlgorithm");
+                                   "\" is not an ITriggerAlgorithm");
                 continue;
             }
 
@@ -206,7 +206,7 @@ public class TimeTrigger
             alist.add(algo);
         }
 
-        INewAlgorithm[] list = new INewAlgorithm[alist.size()];
+        ITriggerAlgorithm[] list = new ITriggerAlgorithm[alist.size()];
         for (int i = 0; i < list.length; i++) {
             list[i] = alist.get(i);
         }

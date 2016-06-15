@@ -4,9 +4,8 @@ import icecube.daq.io.DAQComponentOutputProcess;
 import icecube.daq.payload.IPayload;
 import icecube.daq.payload.ITriggerRequestPayload;
 import icecube.daq.splicer.Splicer;
-import icecube.daq.trigger.control.INewManager;
-import icecube.daq.trigger.common.ITriggerAlgorithm;
-import icecube.daq.trigger.control.INewManager;
+import icecube.daq.trigger.algorithm.ITriggerAlgorithm;
+import icecube.daq.trigger.control.ITriggerManager;
 import icecube.daq.util.DOMRegistry;
 
 import java.util.List;
@@ -14,17 +13,12 @@ import java.util.Map;
 import java.util.TreeMap;
 
 public class MockManager
-    implements INewManager
+    implements ITriggerManager
 {
     private DOMRegistry reg;
     private IPayload earliest;
 
     public void addTrigger(ITriggerAlgorithm x0)
-    {
-        throw new Error("Unimplemented");
-    }
-
-    public void addTriggerRequest(ITriggerRequestPayload x0)
     {
         throw new Error("Unimplemented");
     }
@@ -55,11 +49,6 @@ public class MockManager
     }
 
     public int getSourceId()
-    {
-        throw new Error("Unimplemented");
-    }
-
-    public TreeMap getStringMap()
     {
         throw new Error("Unimplemented");
     }
