@@ -1,16 +1,14 @@
 package icecube.daq.testbed;
 
 import icecube.daq.io.DAQComponentOutputProcess;
+import icecube.daq.juggler.alert.AlertQueue;
 import icecube.daq.payload.IPayload;
 import icecube.daq.payload.ITriggerRequestPayload;
 import icecube.daq.splicer.Splicer;
+import icecube.daq.trigger.algorithm.AlgorithmStatistics;
 import icecube.daq.trigger.algorithm.ITriggerAlgorithm;
 import icecube.daq.trigger.control.ITriggerManager;
 import icecube.daq.util.DOMRegistry;
-
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 public class MockManager
     implements ITriggerManager
@@ -23,12 +21,22 @@ public class MockManager
         throw new Error("Unimplemented");
     }
 
-    public void addTriggers(List x0)
+    public void addTriggers(Iterable<ITriggerAlgorithm> x0)
     {
         throw new Error("Unimplemented");
     }
 
     public void flush()
+    {
+        throw new Error("Unimplemented");
+    }
+
+    public AlertQueue getAlertQueue()
+    {
+        throw new Error("Unimplemented");
+    }
+
+    public Iterable<AlgorithmStatistics> getAlgorithmStatistics()
     {
         throw new Error("Unimplemented");
     }
@@ -48,6 +56,11 @@ public class MockManager
         throw new Error("Unimplemented");
     }
 
+    public int getNumRequestsQueued()
+    {
+        throw new Error("Unimplemented");
+    }
+
     public int getSourceId()
     {
         throw new Error("Unimplemented");
@@ -58,7 +71,7 @@ public class MockManager
         throw new Error("Unimplemented");
     }
 
-    public Map getTriggerCounts()
+    public boolean isStopped()
     {
         throw new Error("Unimplemented");
     }

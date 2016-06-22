@@ -1,16 +1,17 @@
 package icecube.daq.testbed;
 
 import icecube.daq.common.ANSIEscapeCode;
-import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.juggler.mbean.MemoryStatistics;
 import icecube.daq.splicer.HKN1Splicer;
 import icecube.daq.splicer.Splicer;
-import icecube.daq.trigger.common.DAQTriggerComponent;
+import icecube.daq.trigger.algorithm.AlgorithmStatistics;
 
 import java.io.PrintStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -20,7 +21,7 @@ import org.apache.commons.logging.LogFactory;
 /**
  * Monitor all activity in this component.
  */
-public class ActivityMonitor
+public abstract class ActivityMonitor
 {
     private static final Log LOG = LogFactory.getLog(ActivityMonitor.class);
 
@@ -31,9 +32,7 @@ public class ActivityMonitor
     private static final int PROGRESS_FREQUENCY = 100;
     private static final int MONITOR_FREQUENCY = 4;
 
-    private DAQTriggerComponent comp;
-    private String prefix;
-    private PayloadFileListBridge[] bridges;
+    private AbstractPayloadFileListBridge[] bridges;
     private Consumer consumer;
     private int maxFailures;
 
@@ -48,12 +47,9 @@ public class ActivityMonitor
 
     private MemoryStatistics memoryStats = new MemoryStatistics();
 
-    ActivityMonitor(DAQTriggerComponent comp, String prefix,
-                    PayloadFileListBridge[] bridges, Consumer consumer,
+    ActivityMonitor(AbstractPayloadFileListBridge[] bridges, Consumer consumer,
                     int maxFailures)
     {
-        this.comp = comp;
-        this.prefix = prefix;
         this.bridges = bridges;
         this.consumer = consumer;
         this.maxFailures = maxFailures;
@@ -66,88 +62,32 @@ public class ActivityMonitor
      */
     private boolean check()
     {
-        if (stopped != summarized) {
-            summarized = stopped;
+        if (isStopped() != summarized) {
+            summarized = isStopped();
         }
 
-        boolean newStopped = (comp == null ||
-                              (!comp.getReader().isRunning() &&
-                               comp.getWriter().isStopped()));
+        boolean newStopped = isInputStopped() && isOutputStopped();
 
-        boolean changed = false;
-        if (comp != null && !summarized) {
-            if (received != comp.getPayloadsReceived()) {
-                received = comp.getPayloadsReceived();
-                changed = true;
-            }
-            if (queuedIn != comp.getTriggerManager().getNumInputsQueued()) {
-                queuedIn = comp.getTriggerManager().getNumInputsQueued();
-                changed = true;
-            }
-            if (processed != comp.getTriggerManager().getTotalProcessed()) {
-                processed = comp.getTriggerManager().getTotalProcessed();
-                changed = true;
-            }
-            if (queuedOut != comp.getTriggerManager().getNumOutputsQueued()) {
-                queuedOut = comp.getTriggerManager().getNumOutputsQueued();
-                changed = true;
-            }
-            if (sent != comp.getPayloadsSent()) {
-                sent = comp.getPayloadsSent();
-                changed = true;
-            }
+        boolean changed;
+        if (isSummarized()) {
+            changed = false;
+        } else {
+            changed = checkMonitoredObject();
         }
 
-        if (stopped != newStopped) {
-            stopped = newStopped;
-        }
+        setStopped(newStopped);
 
-        if (!stopped) {
-            long earliestTime = Long.MAX_VALUE;
-            long latestTime = 0;
-            for (PayloadFileListBridge bridge : bridges) {
-                if (bridge.getLastTime() > 0 &&
-                    bridge.getLastTime() < Long.MAX_VALUE)
-                {
-                    if (bridge.getLastTime() < earliestTime) {
-                        earliestTime = bridge.getLastTime();
-                    }
-
-                    if (bridge.getLastTime() > latestTime) {
-                        latestTime = bridge.getLastTime();
-                    }
-                }
-            }
-
-            if (earliestTime < Long.MAX_VALUE && latestTime > 0) {
-                for (PayloadFileListBridge bridge : bridges) {
-                    if (bridge.isPaused() &&
-                        bridge.getLastTime() - latestTime < MAX_TIME_DIFF)
-                    {
-                        bridge.unpause();
-                    }
-
-                    if (!bridge.isPaused() &&
-                        bridge.getLastTime() - earliestTime > MAX_TIME_DIFF)
-                    {
-                        bridge.pause();
-                    }
-                }
-            }
+        if (!isStopped()) {
+            checkBridges();
         }
 
         if (consumer.getNumberFailed() > maxFailures && !forcedStop) {
             // pause everything
-            for (PayloadFileListBridge bridge : bridges) {
+            for (AbstractPayloadFileListBridge bridge : bridges) {
                 bridge.stopThread();
             }
 
-            // now force component to stop
-            try {
-                comp.forcedStop();
-            } catch (DAQCompException dce) {
-                LOG.error("Cannot forceStop " + comp.getName(), dce);
-            }
+            forceStop();
 
             consumer.setForcedStop();
 
@@ -157,124 +97,66 @@ public class ActivityMonitor
         return changed;
     }
 
-    private void dumpMBeanDynamic(PrintStream out,
-                                  javax.management.DynamicMBean mbean,
-                                  String indent)
+    public abstract boolean checkMonitoredObject();
+
+    void checkBridges()
     {
-        javax.management.MBeanInfo info = mbean.getMBeanInfo();
-        javax.management.MBeanAttributeInfo[] attrs = info.getAttributes();
-        for (int i = 0; i < attrs.length; i++) {
-            if (!attrs[i].isReadable()) {
-                out.println(indent + "!" + attrs[i].getName());
-            } else {
-                Object rtnval;
-                try {
-                    rtnval = mbean.getAttribute(attrs[i].getName());
-                } catch (Exception ex) {
-                    ex.printStackTrace(out);
-                    continue;
+        long earliestTime = Long.MAX_VALUE;
+        long latestTime = 0;
+        for (AbstractPayloadFileListBridge bridge : bridges) {
+            if (bridge.getLastTime() > 0 &&
+                bridge.getLastTime() < Long.MAX_VALUE)
+            {
+                if (bridge.getLastTime() < earliestTime) {
+                    earliestTime = bridge.getLastTime();
                 }
 
-                out.println(indent + attrs[i].getName() + ": " +
-                            getMBeanValueString(rtnval));
-            }
-        }
-    }
-
-    private void dumpMBeanData(PrintStream out, Object obj, String indent)
-    {
-        Class cls = obj.getClass();
-
-        Class[] ifaces = cls.getInterfaces();
-        for (int i = 0; i < ifaces.length; i++) {
-            if (ifaces[i].getName().endsWith("MBean")) {
-                if (ifaces[i].getName().endsWith("DynamicMBean")) {
-                    dumpMBeanDynamic(out, (javax.management.DynamicMBean) obj,
-                                     indent);
-                } else {
-                    dumpMBeanInterface(out, obj, ifaces[i], indent);
+                if (bridge.getLastTime() > latestTime) {
+                    latestTime = bridge.getLastTime();
                 }
-                break;
+            }
+        }
+
+        if (earliestTime < Long.MAX_VALUE && latestTime > 0) {
+            for (AbstractPayloadFileListBridge bridge : bridges) {
+                if (bridge.isPaused() &&
+                    bridge.getLastTime() - latestTime < MAX_TIME_DIFF)
+                {
+                    bridge.unpause();
+                }
+
+                if (!bridge.isPaused() &&
+                    bridge.getLastTime() - earliestTime > MAX_TIME_DIFF)
+                {
+                    bridge.pause();
+                }
             }
         }
     }
 
-    private void dumpMBeanInterface(PrintStream out, Object obj, Class iface,
-                                    String indent)
-    {
-        Method[] methods = iface.getMethods();
-        for (int i = 0; i < methods.length; i++) {
-            Class[] params = methods[i].getParameterTypes();
-            if (params != null && params.length > 0) {
-                out.println(indent + "*** " + obj.getClass().getName() +
-                            " MBean method " + iface.getName() +
-                            " should not have any parameters");
-                continue;
-            }
-
-            String name = methods[i].getName();
-            if (name.startsWith("get")) {
-                name = name.substring(3);
-            } else if (name.startsWith("is")) {
-                name = name.substring(2);
-            } else {
-                out.println(indent + "*** " + obj.getClass().getName() +
-                            " MBean method " + iface.getName() +
-                            " does not start with \"get\" or \"is\"");
-                continue;
-            }
-
-            Object rtnval;
-            try {
-                rtnval = methods[i].invoke(obj);
-            } catch (Exception ex) {
-                ex.printStackTrace(out);
-                continue;
-            }
-
-            out.println(indent + name + ": " + getMBeanValueString(rtnval));
-        }
-    }
-
-    private void dumpMonitoring(PrintStream out, int rep)
-    {
-        Set<String> names = comp.listMBeans();
-        if (names == null || names.size() == 0) {
-            return;
-        }
-
-        String dateStr = getFakeDateString(rep);
-        for (String name : names) {
-            //out.print(ANSIEscapeCode.FG_YELLOW + ANSIEscapeCode.BG_BLUE);
-            out.println(name + ": " + dateStr + ":");
-            try {
-                dumpMBeanData(out, comp.getMBean(name), "    ");
-            } catch (DAQCompException dce) {
-                dce.printStackTrace(out);
-            }
-            out.println();
-        }
-        //out.println(ANSIEscapeCode.OFF);
-    }
+    public abstract void dumpMonitoring(PrintStream out, int rep);
 
     private void dumpProgress(PrintStream out, int rep, boolean dumpSplicers)
     {
-        final String tcRaw = getTriggerCountsString();
+        StringBuilder buf = new StringBuilder();
+        buf.append('#').
+            append(rep).
+            append(':').
+            append(ANSIEscapeCode.BG_GREEN).
+            append(toString()).
+            append(ANSIEscapeCode.OFF);
 
-        String tcStr;
-        if (tcRaw == null || tcRaw.length() == 0) {
-            tcStr = "";
-        } else {
-            tcStr = "\n        " + ANSIEscapeCode.BG_MAGENTA + tcRaw +
-                ANSIEscapeCode.OFF;
+        for (AlgorithmStatistics stat : getAlgorithmStatistics()) {
+            buf.append("\n        ").
+                append(ANSIEscapeCode.BG_MAGENTA).
+                append(stat.toString()).
+                append(ANSIEscapeCode.OFF);
         }
 
-        out.println("#" + rep + ":" +
-                    ANSIEscapeCode.BG_GREEN + toString() +
-                    ANSIEscapeCode.OFF + tcStr);
+        out.println(buf.toString());
 
         if (dumpSplicers) {
-            dumpSplicer(out, prefix, comp.getSplicer());
+            dumpSplicer(out, getName(), getSplicer());
         }
     }
 
@@ -288,6 +170,18 @@ public class ActivityMonitor
             out.println("  " + desc[d]);
         }
     }
+
+    /**
+     * Force component to stop.
+     */
+    public abstract void forceStop();
+
+    /**
+     * Format the trigger counts into a string.
+     *
+     * @return trigger counts string
+     */
+    public abstract Iterable<AlgorithmStatistics> getAlgorithmStatistics();
 
     private String getFakeDateString(int rep)
     {
@@ -361,12 +255,36 @@ public class ActivityMonitor
         }
     }
 
+    public abstract String getMonitoredName();
+
+    public abstract String getName();
+
+    long getNumberOfQueuedInputs()
+    {
+        return queuedIn;
+    }
+
+    long getNumberOfQueuedOutputs()
+    {
+        return queuedOut;
+    }
+
+    long getNumberProcessed()
+    {
+        return processed;
+    }
+
+    long getNumberReceived()
+    {
+        return received;
+    }
+
     /**
      * Get the number of payloads sent.
      *
      * @return number of payloads sent
      */
-    public long getSent()
+    long getNumberSent()
     {
         return sent;
     }
@@ -376,43 +294,13 @@ public class ActivityMonitor
      *
      * @return splicer
      */
-    public Splicer getSplicer()
-    {
-        return comp.getSplicer();
-    }
+    public abstract Splicer getSplicer();
 
-    /**
-     * Format the trigger counts into a string.
-     *
-     * @return trigger counts string
-     */
-    private String getTriggerCountsString()
-    {
-        Map<String, Long> trigCounts =
-            comp.getTriggerManager().getTriggerCounts();
+    public abstract boolean isInputPaused();
 
-        StringBuilder buf = new StringBuilder();
-        for (String key : trigCounts.keySet()) {
-            int idx = key.lastIndexOf("Trigger");
+    public abstract boolean isInputStopped();
 
-            String name;
-            if (idx < 0) {
-                name = key;
-            } else if (idx + 7 == key.length()) {
-                name = key.substring(0, idx);
-            } else {
-                name = key.substring(0, idx) + key.substring(idx + 8);
-            }
-            if (name.endsWith("1")) {
-                name = name.substring(0, name.length() - 1);
-            }
-
-            buf.append(" ").append(name).append(":").
-                append(trigCounts.get(key));
-        }
-
-        return buf.toString();
-    }
+    public abstract boolean isOutputStopped();
 
     /**
      * Is everything stopped?
@@ -424,30 +312,48 @@ public class ActivityMonitor
         return stopped;
     }
 
-    /**
-     * Return a debugging string.
-     *
-     * @return debugging string
-     */
-    public String toString()
+    public boolean isSummarized()
     {
-        if (comp == null) {
-            return "";
-        }
+        return summarized;
+    }
 
-        String rdStopped = comp.getReader().isRunning() ? "" : " inStop";
-        String wrStopped = comp.getWriter().isStopped() ? " outStop" : "";
+    public abstract void pauseInput();
 
-        if (summarized) {
-            return " " + prefix + " stopped";
-        }
+    public abstract void resumeInput();
 
-        long[] stats = memoryStats.getMemoryStatistics();
+    void setNumberOfQueuedInputs(long value)
+    {
+        queuedIn = value;
+    }
 
-        summarized = stopped;
-        return String.format(" %s%s %d->%d->%d->%d->%d%s | %d / %d",
-                             prefix, rdStopped, received, queuedIn, processed,
-                             queuedOut, sent, wrStopped, stats[0], stats[1]);
+    void setNumberOfQueuedOutputs(long value)
+    {
+        queuedOut = value;
+    }
+
+    void setNumberProcessed(long value)
+    {
+        processed = value;
+    }
+
+    void setNumberReceived(long value)
+    {
+        received = value;
+    }
+
+    void setNumberSent(long value)
+    {
+        sent = value;
+    }
+
+    /**
+     * Set "stopped" state
+     *
+     * @param val <tt>true</tt> if the monitored object has stopped
+     */
+    public void setStopped(boolean val)
+    {
+        stopped = val;
     }
 
     boolean waitForStasis(int staticReps, int maxReps, int stoppedReps,
@@ -472,17 +378,17 @@ public class ActivityMonitor
             }
 
             if (changed && (queuedIn > MAX_QUEUED || queuedOut > MAX_QUEUED) &&
-                !comp.getReader().isPaused())
+                !isInputPaused())
             {
-                comp.getReader().pause();
+                pauseInput();
                 if (verbose) {
                     System.err.println("!! Pausing reader");
                 }
             } else if (changed &&
                        (queuedIn <= MAX_QUEUED && queuedOut <= MAX_QUEUED) &&
-                       comp.getReader().isPaused())
+                       isInputPaused())
             {
-                comp.getReader().unpause();
+                resumeInput();
                 if (verbose) {
                     System.err.println("!! Unpausing reader");
                 }
@@ -497,7 +403,7 @@ public class ActivityMonitor
             }
 
             if (numStatic >= staticReps || numStopped >= stoppedReps) {
-                System.out.println("Component " + comp + " was static for " +
+                System.out.println(getMonitoredName() + " was static for " +
                                    numStatic + " reps" +
                                    (numStopped == 0 ? "" :
                                     ", stopped for " + numStopped + " reps"));
@@ -512,5 +418,29 @@ public class ActivityMonitor
         }
 
         return numStatic >= staticReps;
+    }
+
+    /**
+     * Return a debugging string.
+     *
+     * @return debugging string
+     */
+    public String toString()
+    {
+        String rdStopped = isInputStopped() ? " inStop" : "";
+        String wrStopped = isOutputStopped() ? " outStop" : "";
+
+        if (isSummarized()) {
+            return " " + getName() + " stopped";
+        }
+
+        long[] stats = memoryStats.getMemoryStatistics();
+
+        summarized = stopped;
+        return String.format(" %s%s %d->%d->%d->%d->%d%s | %d / %d",
+                             getName(), rdStopped, getNumberReceived(),
+                             getNumberOfQueuedInputs(), getNumberProcessed(),
+                             getNumberOfQueuedOutputs(), getNumberSent(),
+                             wrStopped, stats[0], stats[1]);
     }
 }

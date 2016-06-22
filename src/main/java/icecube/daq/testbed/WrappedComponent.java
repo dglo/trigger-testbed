@@ -2,136 +2,25 @@ package icecube.daq.testbed;
 
 import icecube.daq.io.DAQComponentIOProcess;
 import icecube.daq.io.DAQComponentOutputProcess;
+import icecube.daq.juggler.alert.AlertQueue;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.SourceIdRegistry;
-import icecube.daq.trigger.common.DAQTriggerComponent;
-import icecube.daq.trigger.common.ITriggerAlgorithm;
+import icecube.daq.trigger.algorithm.ITriggerAlgorithm;
+import icecube.daq.trigger.component.DAQTriggerComponent;
+import icecube.daq.trigger.control.ITriggerManager;
+import icecube.daq.trigger.exceptions.ConfigException;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.channels.Pipe;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-/**
- * A complex object which can be used to filter and sort hit file names.
- */
-class SimpleHitFilter
-    implements Comparator, FilenameFilter
-{
-    private String baseName;
-
-    /**
-     * Create a hit file filter.
-     *
-     * @param hubName hub name
-     * @param runNum run number
-     * @param hubNum hub number
-     */
-    SimpleHitFilter(String hubName, int runNum, int hubNum)
-    {
-        baseName = String.format("%s%02d_simplehits_%d_", hubName, hubNum,
-                                 runNum);
-    }
-
-    /**
-     * Does this file name start with the expected pattern?
-     *
-     * @return <tt>true</tt> if the file name starts with the expected pattern
-     */
-    public boolean accept(File dir, String name)
-    {
-        return name.startsWith(baseName);
-    }
-
-    /**
-     * Base filename
-     *
-     * @return filename
-     */
-    public String basename()
-    {
-        return baseName;
-    }
-
-    /**
-     * Compare two objects.
-     *
-     * @param o1 first object
-     * @param o2 second object
-     *
-     * @return the usual comparison values
-     */
-    public int compare(Object o1, Object o2)
-    {
-        if (!(o1 instanceof File) || !(o2 instanceof File)) {
-            return o1.getClass().getName().compareTo(o2.getClass().getName());
-        }
-
-        String s1 = ((File) o1).getName();
-        String s2 = ((File) o2).getName();
-
-        if (!s1.startsWith(baseName)) {
-            if (!s2.startsWith(baseName)) {
-                return s1.compareTo(s2);
-            }
-
-            return 1;
-        } else if (!s2.startsWith(baseName)) {
-            return -1;
-        }
-
-        int end1 = s1.indexOf("_", baseName.length() + 1);
-        String sub1 = s1.substring(baseName.length(), end1);
-        int num1;
-        try {
-            num1 = Integer.parseInt(sub1);
-        } catch (NumberFormatException nfe) {
-            throw new Error(String.format("Cannot parse \"%s\" from \"%s\"",
-                                          sub1, s1));
-        }
-
-        int end2 = s2.indexOf("_", baseName.length() + 1);
-        String sub2 = s2.substring(baseName.length(), end2);
-        int num2;
-        try {
-            num2 = Integer.parseInt(sub2);
-        } catch (NumberFormatException nfe) {
-            throw new Error(String.format("Cannot parse \"%s\" from \"%s\"",
-                                          sub2, s2));
-        }
-
-        return num1 - num2;
-    }
-
-    /**
-     * Do the objects implement the same class?
-     *
-     * @return <tt>true</tt> if they are the same class
-     */
-    public boolean equals(Object obj)
-    {
-        return obj.getClass().getName().equals(getClass().getName());
-    }
-
-    /**
-     * Sort the list of files.
-     *
-     * @param files list of files
-     */
-    public void sort(File[] files)
-    {
-        Arrays.sort(files, this);
-    }
-}
 
 /**
  * Base class for DAQ component wrapper.
@@ -241,20 +130,23 @@ public abstract class WrappedComponent
 
         out.addDataChannel(sinkOut, outCache);
 
-        Consumer consumer;
+        ConsumerHandler handler;
 
         final String name = HashedFileName.getName(runCfgName, getSourceID(),
                                                    runNumber, numSrcs,
                                                    numToSkip, numToProcess);
         File outFile = new File(targetDir, name);
         if (outFile.exists()) {
-            consumer = new CompareConsumer(outFile, srcOut);
+            handler = new CompareHandler(outFile);
             System.err.println("*** Comparing output with " + outFile);
         } else {
-            consumer = new OutputConsumer(outFile, srcOut);
+            handler = new OutputHandler(outFile);
             System.err.println("*** Writing output to " + outFile);
         }
-        consumer.configure(algorithms);
+        handler.configure(algorithms);
+
+        ChannelConsumer consumer =
+            new ChannelConsumer(outFile.getName(), srcOut, handler);
         consumer.start();
 
         return consumer;
@@ -289,27 +181,8 @@ public abstract class WrappedComponent
             throw new IOException(ce.getMessage());
         }
 
-        String hubName;
-        int hubBase;
-
-        switch (srcId) {
-        case SourceIdRegistry.INICE_TRIGGER_SOURCE_ID:
-            hubName = "hub";
-            hubBase = 0;
-            break;
-        case SourceIdRegistry.ICETOP_TRIGGER_SOURCE_ID:
-            hubName = "ithub";
-            hubBase = SourceIdRegistry.ICETOP_ID_OFFSET;
-            break;
-        case SourceIdRegistry.GLOBAL_TRIGGER_SOURCE_ID:
-            throw new Error("Cannot write hits into global trigger");
-        default:
-            throw new Error("Cannot write hits into " +
-                            SourceIdRegistry.getDAQNameFromSourceID(srcId));
-        }
-
         if (hubs == null || hubs.size() < numSrcs) {
-            throw new IOException("Asked for " + numSrcs + " " + hubName +
+            throw new IOException("Asked for " + numSrcs + " hub" +
                                   (numSrcs == 1 ? "" : "s") + ", but only " +
                                   (hubs == null ? 0 : hubs.size()) +
                                   " available in " + cfg.getName());
@@ -318,22 +191,12 @@ public abstract class WrappedComponent
         PayloadFileListBridge[] bridges = new PayloadFileListBridge[numSrcs];
 
         for (int h = 0; h < numSrcs; h++) {
-            SimpleHitFilter filter =
-                new SimpleHitFilter(hubName, runNum, hubs.get(h) - hubBase);
-            File[] files = srcDir.listFiles(filter);
-            if (files.length == 0) {
-                String msg =
-                    String.format("Cannot find hit files for run %d %s %d" +
-                                  " (%s)", runNum, hubName, hubs.get(h),
-                                  filter.basename());
-                throw new IOException(msg);
-            }
-
-            // make sure fies are in the correct order
-            filter.sort(files);
+            final int hubId = hubs.get(h);
+            File[] files = SimpleHitFilter.listFiles(srcDir, hubId, runNum);
 
             PayloadFileListBridge bridge =
-                new PayloadFileListBridge(files, tails[h].sink());
+                new PayloadFileListBridge(SimpleHitFilter.getHubName(hubId),
+                                          files, tails[h].sink());
             bridge.setNumberToSkip(numToSkip);
             bridge.setMaximumPayloads(numToProcess);
             bridge.setWriteDelay(1, 10);
@@ -387,7 +250,7 @@ public abstract class WrappedComponent
             File[] files = new File[] { new File(srcDir, name), };
 
             PayloadFileListBridge bridge =
-                new PayloadFileListBridge(files, tails[i].sink());
+                new PayloadFileListBridge("trigOut", files, tails[i].sink());
             bridge.setWriteDelay(1, 10);
             bridges[i] = bridge;
         }
@@ -397,7 +260,25 @@ public abstract class WrappedComponent
 
     public void destroy()
     {
-        comp.getTriggerManager().stopThread();
+        ITriggerManager mgr = comp.getTriggerManager();
+        mgr.stopThread();
+        for (int i = 0; i < 100; i++) {
+            if (mgr.isStopped()) {
+                break;
+            }
+            Thread.yield();
+        }
+
+        AlertQueue aq = mgr.getAlertQueue();
+        if (aq != null) {
+            aq.stop();
+            for (int i = 0; i < 100; i++) {
+                if (aq.isStopped()) {
+                    break;
+                }
+                Thread.yield();
+            }
+        }
 
         if (tails != null) {
             DAQTestUtil.closePipeList(tails);
@@ -512,8 +393,9 @@ public abstract class WrappedComponent
             prefix = "XX#" + getSourceID();
         }
 
-        ActivityMonitor activity = new ActivityMonitor(comp, prefix, bridges,
-                                                       consumer, maxFailures);
+        ComponentMonitor activity = new ComponentMonitor(comp, prefix, bridges,
+                                                         consumer,
+                                                         maxFailures);
 
         if (LOG.isInfoEnabled()) {
             LOG.info("Waiting");
@@ -533,19 +415,30 @@ public abstract class WrappedComponent
             monOut.close();
         }
 
-        if (LOG.isInfoEnabled()) {
-            LOG.info("Stopping");
+        if (verbose) {
+            System.out.println("Flushing...");
         }
-
         comp.flushTriggers();
 
+        if (verbose) {
+            System.out.println("Stopping...");
+        }
         comp.stopping();
 
+        if (verbose) {
+            System.out.println("Sending stops...");
+        }
         DAQTestUtil.sendStops(tails, true);
 
+        if (verbose) {
+            System.out.println("Waiting for final flush...");
+        }
         activity.waitForStasis(20, numToProcess, 3, verbose, dumpSplicer,
                                null);
 
+        if (verbose) {
+            System.out.println("Stopped...");
+        }
         comp.stopped();
 
         final double endTime = ((double) System.nanoTime()) / 1000000000.0;
@@ -558,7 +451,12 @@ public abstract class WrappedComponent
 
         final boolean noOutput = consumer.getNumberWritten() == 0 &&
             consumer.getNumberFailed() == 0;
-        checkTriggerCaches(comp, noOutput, verbose);
+        try {
+            checkTriggerCaches(comp, noOutput, verbose);
+        } catch (Throwable thr) {
+            LOG.error("Problem with trigger caches", thr);
+            rtnval = false;
+        }
 
         return rtnval;
     }

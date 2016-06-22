@@ -1,6 +1,8 @@
 package icecube.daq.testbed;
 
 import icecube.daq.common.ANSIEscapeCode;
+import icecube.daq.trigger.exceptions.ConfigException;
+import icecube.daq.util.DOMRegistry;
 import icecube.daq.util.LocatePDAQ;
 
 import java.io.BufferedReader;
@@ -39,6 +41,8 @@ public class TestBed
     private File targetDir;
     private boolean verbose;
     private boolean waitForInput;
+
+    private DOMRegistry registry;
 
     /**
      * Create a testbed object.
@@ -282,11 +286,6 @@ public class TestBed
             }
         }
 
-        if (runNumber == 0) {
-            System.err.println("Please specify run number");
-            usage = true;
-        }
-
         if (srcDir == null && runNumber != 0) {
             String tmpPath =
                 String.format("prj/simplehits/run%05d", runNumber);
@@ -325,13 +324,21 @@ public class TestBed
             }
         }
 
+        try {
+            registry = DOMRegistry.loadRegistry(configDir);
+        } catch (Exception ex) {
+            System.err.println("Cannot load DOM registry");
+            ex.printStackTrace();
+            usage = true;
+        }
+
         if (runCfgName == null) {
             System.err.println("Please specify run configuration name");
             usage = true;
         } else if (configDir != null) {
             try {
                 Configuration tmpCfg =
-                    new Configuration(configDir, runCfgName);
+                    new Configuration(configDir, runCfgName, registry);
                 runCfg = tmpCfg;
             } catch (ConfigException ce) {
                 ce.printStackTrace();
@@ -377,7 +384,7 @@ public class TestBed
         }
 
         if (usage) {
-            String usageMsg = "java " + getClass().getName() + " " +
+            String usageMsg = "java " + getClass().getName() +
                 " [-C componentClass]" +
                 " [-c runConfig]" +
                 " [-D configDir]" +

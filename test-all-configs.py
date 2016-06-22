@@ -84,19 +84,6 @@ if __name__ == "__main__":
         for f in opt.cfglist:
             cfg_lister.add(f)
 
-    if not opt.no_old and not opt.no_new:
-        old_new_list = (True, False)
-    else:
-        if opt.no_old:
-            old_opt = None
-        else:
-            old_opt = True
-        if opt.no_new:
-            new_opt = None
-        else:
-            new_opt = False
-        old_new_list = (old_opt, new_opt)
-
     if opt.no_inice:
         inice_opt = None
     else:
@@ -126,8 +113,8 @@ if __name__ == "__main__":
     fd = open(logfile, "w")
 
     try:
-        runner.run_all(fd, cfg_lister, opt.target_dir, old_new_list, type_list,
-                       RUN_NUMBER, num_hits_list, run_old=opt.run_old,
+        runner.run_all(fd, cfg_lister, opt.target_dir, type_list, RUN_NUMBER,
+                       num_hits_list, run_old=opt.run_old,
                        verbose=opt.verbose, debug=opt.debug)
     finally:
         fd.close()

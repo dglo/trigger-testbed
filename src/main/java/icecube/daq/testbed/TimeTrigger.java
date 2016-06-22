@@ -121,7 +121,7 @@ public class TimeTrigger
         int count = 0;
         for (IPayload pay : rdr) {
             for (int i = 0; i < list.length; i++) {
-                timer.start();
+                timer.start(i);
                 try {
                     list[i].runTrigger(pay);
                     timer.stop(i);

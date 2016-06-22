@@ -2,6 +2,11 @@ package icecube.daq.testbed;
 
 import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.payload.impl.TriggerRequest;
+import icecube.daq.trigger.algorithm.ITriggerAlgorithm;
+import icecube.daq.trigger.config.DomSetFactory;
+import icecube.daq.trigger.exceptions.ConfigException;
+import icecube.daq.trigger.exceptions.TriggerException;
+import icecube.daq.util.DOMRegistry;
 import icecube.daq.util.JAXPUtil;
 import icecube.daq.util.JAXPUtilException;
 
@@ -10,38 +15,68 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-class ConfigException
-    extends Exception
+class TriggerReadout
 {
-    ConfigException(String msg)
+    private int type;
+    private int offset;
+    private int minus;
+    private int plus;
+
+    TriggerReadout(int type, int offset, int minus, int plus)
     {
-        super(msg);
+        this.type = type;
+        this.offset = offset;
+        this.minus = minus;
+        this.plus = plus;
     }
 
-    ConfigException(Exception ex)
+    public int getMinus()
     {
-        super(ex);
+        return minus;
     }
-    ConfigException(String msg, Exception ex)
+
+    public int getOffset()
     {
-        super(msg, ex);
+        return offset;
+    }
+
+    public int getPlus()
+    {
+        return plus;
+    }
+
+    public int getType()
+    {
+        return type;
+    }
+
+    public String toString()
+    {
+        return String.format("TriggerReadout[#%d: %d -%d +%d]", type, offset,
+                             minus, plus);
     }
 }
 
 class AlgorithmData
+    extends ObjectCreator
 {
     private String name;
     private int type;
     private int cfgId;
     private int srcId;
+    private HashMap<String, String> parameters = new HashMap<String, String>();
+    private ArrayList<TriggerReadout> readouts =
+        new ArrayList<TriggerReadout>();
 
     AlgorithmData(String name, int type, int cfgId, int srcId)
     {
@@ -49,6 +84,88 @@ class AlgorithmData
         this.type = type;
         this.cfgId = cfgId;
         this.srcId = srcId;
+    }
+
+    public void addParameter(String name, String value)
+    {
+        parameters.put(name, value);
+    }
+
+    public void addReadout(int type, int offset, int minus, int plus)
+        throws ConfigException
+    {
+        readouts.add(new TriggerReadout(type, offset, minus, plus));
+    }
+
+    public ITriggerAlgorithm create(boolean useOld)
+        throws ConfigException
+    {
+        final String packageName = "icecube.daq.trigger.algorithm.";
+
+        String prefix;
+        if (useOld) {
+            prefix = "Old";
+        } else {
+            prefix = "";
+        }
+
+        Class classObj = null;
+
+        String className = packageName + prefix + name;
+        try {
+            classObj = Class.forName(className);
+        } catch (ClassNotFoundException cnfe) {
+            throw new ConfigException("Cannot load " + className);
+        }
+
+        final boolean isSMT = name.startsWith("SimpleMajorityTrigger");
+        final boolean isCyl = name.startsWith("CylinderTrigger");
+
+        String triggerName;
+        if (isSMT) {
+            triggerName = "SMT";
+        } else {
+            final int end = name.indexOf("Trigger");
+            if (end <= 0) {
+                triggerName = name;
+            } else {
+                triggerName = name.substring(0, end);
+            }
+        }
+
+        ITriggerAlgorithm algo = (ITriggerAlgorithm) createObject(classObj);
+        algo.setSourceId(srcId);
+        algo.setTriggerConfigId(cfgId);
+        algo.setTriggerType(type);
+
+        for (TriggerReadout rdout : readouts) {
+            algo.addReadout(rdout.getType(), rdout.getOffset(),
+                            rdout.getMinus(), rdout.getPlus());
+        }
+
+        for (Map.Entry<String, String> entry : parameters.entrySet()) {
+            try {
+                algo.addParameter(entry.getKey(), entry.getValue());
+            } catch (TriggerException upe) {
+                throw new ConfigException("Cannot create " + className, upe);
+            }
+
+            if (isSMT && entry.getKey().equals("threshold")) {
+                // distinguish between SMT3 and SMT8
+                triggerName += entry.getValue();
+            } else if (isCyl && entry.getKey().equals("simpleMultiplicity")) {
+                triggerName += entry.getValue();
+            }
+        }
+
+        algo.setTriggerName(triggerName);
+
+        return algo;
+    }
+
+    public int getConfigId()
+    {
+        return cfgId;
     }
 
     public String getName()
@@ -65,6 +182,12 @@ class AlgorithmData
     {
         return type;
     }
+
+    public String toString()
+    {
+        return String.format("%s[#%d cfg %d src %d]", name, type, cfgId,
+                             srcId);
+    }
 }
 
 public class Configuration
@@ -75,13 +198,14 @@ public class Configuration
     private List<Integer> icetopHubs;
     private List<AlgorithmData> algorithmData;
 
-    public Configuration(File configDir, String runCfgName)
+    public Configuration(File configDir, String runCfgName,
+                         DOMRegistry registry)
         throws ConfigException
     {
-        this(buildFileName(configDir, runCfgName));
+        this(buildFileName(configDir, runCfgName), registry);
     }
 
-    public Configuration(File file)
+    public Configuration(File file, DOMRegistry registry)
         throws ConfigException
     {
         this.file = file;
@@ -105,6 +229,10 @@ public class Configuration
         }
 
         loadTrigConfig(tcFile);
+
+        final String cfgPath = trigDir.getParentFile().getPath();
+        DomSetFactory.setConfigurationDirectory(cfgPath);
+        DomSetFactory.setDomRegistry(registry);
     }
 
     private static File buildFileName(File configDir, String runCfgName)
@@ -164,7 +292,7 @@ public class Configuration
      *
      * @return list of hub IDs
      */
-    public Iterable<Integer> getHubs(int srcId)
+    public List<Integer> getHubs(int srcId)
         throws ConfigException
     {
         switch (srcId) {
@@ -222,6 +350,24 @@ public class Configuration
         }
 
         throw new ConfigException("Bad integer value \"" + intStr + "\"");
+    }
+
+    public ITriggerAlgorithm getTriggerAlgorithm(int configId)
+        throws ConfigException
+    {
+        return getTriggerAlgorithm(configId, false);
+    }
+
+    public ITriggerAlgorithm getTriggerAlgorithm(int configId, boolean useOld)
+        throws ConfigException
+    {
+        for (AlgorithmData ad : algorithmData) {
+            if (ad.getConfigId() == configId) {
+                return ad.create(useOld);
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -447,41 +593,87 @@ public class Configuration
                                           " from run configuration " + file);
             }
 
-            if (false && name.startsWith("SimpleMajority")) {
-                int threshold = Integer.MIN_VALUE;
+            AlgorithmData ad = new AlgorithmData(name, type, cfgId, srcId);
+            parseTriggerParameters(ad, n);
+            parseTriggerReadout(ad, n);
 
-                NodeList pNodes;
-                try {
-                    pNodes = JAXPUtil.extractNodeList(n, "parameterConfig");
-                } catch (JAXPUtilException jex) {
-                    throw new ConfigException(jex);
-                }
+            algorithmData.add(ad);
+        }
+    }
 
-                for (int j = 0; j < pNodes.getLength(); j++) {
-                    Node p = pNodes.item(j);
+    private void parseTriggerParameters(AlgorithmData ad, Node top)
+        throws ConfigException
+    {
+        NodeList pNodes;
+        try {
+            pNodes = JAXPUtil.extractNodeList(top, "parameterConfig");
+        } catch (JAXPUtilException jex) {
+            throw new ConfigException(jex);
+        }
 
-                    String pName;
-                    try {
-                        pName = JAXPUtil.extractText(p, "parameterName");
-                    } catch (JAXPUtilException jex) {
-                        continue;
-                    }
-                    if (pName == null || pName.length() == 0 ||
-                        !pName.equals("threshold"))
-                    {
-                        continue;
-                    }
+        for (int j = 0; j < pNodes.getLength(); j++) {
+            Node p = pNodes.item(j);
 
-                    threshold = extractInteger(p, "parameterValue");
-                    break;
-                }
-
-                if (threshold != Integer.MIN_VALUE) {
-                    name = "SMT" + threshold;
-                }
+            String pName;
+            try {
+                pName = JAXPUtil.extractText(p, "parameterName");
+            } catch (JAXPUtilException jex) {
+                continue;
             }
 
-            algorithmData.add(new AlgorithmData(name, type, cfgId, srcId));
+            String pValue;
+            try {
+                pValue = JAXPUtil.extractText(p, "parameterValue");
+            } catch (JAXPUtilException jex) {
+                continue;
+            }
+
+            ad.addParameter(pName, pValue);
+        }
+    }
+
+    private void parseTriggerReadout(AlgorithmData ad, Node top)
+        throws ConfigException
+    {
+        NodeList pNodes;
+        try {
+            pNodes = JAXPUtil.extractNodeList(top, "readoutConfig");
+        } catch (JAXPUtilException jex) {
+            throw new ConfigException(jex);
+        }
+
+        for (int j = 0; j < pNodes.getLength(); j++) {
+            Node p = pNodes.item(j);
+
+            int type;
+            try {
+                type = extractInteger(p, "readoutType");
+            } catch (ConfigException jex) {
+                continue;
+            }
+
+            int offset;
+            try {
+                offset = extractInteger(p, "timeOffset");
+            } catch (ConfigException jex) {
+                continue;
+            }
+
+            int minus;
+            try {
+                minus = extractInteger(p, "timeMinus");
+            } catch (ConfigException jex) {
+                continue;
+            }
+
+            int plus;
+            try {
+                plus = extractInteger(p, "timePlus");
+            } catch (ConfigException jex) {
+                continue;
+            }
+
+            ad.addReadout(type, offset, minus, plus);
         }
     }
 
@@ -527,8 +719,9 @@ public class Configuration
     {
         File configDir = new File("/Users/dglo/config");
 
+        DOMRegistry reg = DOMRegistry.loadRegistry();
         for (int i = 0; i < args.length; i++) {
-            Configuration cfg = new Configuration(configDir, args[i]);
+            Configuration cfg = new Configuration(configDir, args[i], reg);
             System.out.println("\"" + args[i] + "\" -> " + cfg);
         }
     }

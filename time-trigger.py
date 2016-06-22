@@ -13,7 +13,7 @@ JAVA_ARGS = "-Xmx4000m"
 
 # required jar files from subprojects and Maven repository
 SUBPROJECT_PKGS = ("daq-common", "splicer", "payload", "daq-io", "juggler",
-                   "trigger-common", "trigger", "trigger-testbed")
+                   "trigger", "trigger-testbed")
 REPO_PKGS = (("log4j", "log4j", "1.2.12"),
              ("commons-logging", "commons-logging", "1.0.4"),
              ("org/zeromq", "jzmq-native", "3.1.1-ICECUBE",

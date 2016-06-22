@@ -3,10 +3,10 @@
 import platform
 import sys
 
-from runner import JavaRunner, jzmq_native_specifier
+from RunJava import JavaRunner, jzmq_native_specifier
 
 # main class being run
-MAIN_CLASS = "icecube.daq.testbed.TestBed"
+MAIN_CLASS = "icecube.daq.testbed.TestAlgorithm"
 
 # Java max memory
 JAVA_ARGS = "-Xmx4000m"
@@ -24,18 +24,15 @@ REPO_PKGS = (("log4j", "log4j", "1.2.12"),
 if __name__ == "__main__":
     import os
 
-    runner = JavaRunner(MAIN_CLASS)
-
-    runner.add_subproject_jars(SUBPROJECT_PKGS)
-    runner.add_repo_jars(REPO_PKGS)
+    runner = JavaRunner(MAIN_CLASS, SUBPROJECT_PKGS, REPO_PKGS)
 
     try:
-        jargs = JAVA_ARGS
+        jargs = (JAVA_ARGS, )
     except NameError:
         jargs = None
 
     debug = "DEBUG" in os.environ
 
     rundata = runner.run(jargs, sys.argv[1:], debug=debug)
-    if rundata.returncode() is not None and rundata.returncode() != 0:
-        raise SystemExit(rundata.returncode())
+    if rundata.returncode is not None and rundata.returncode != 0:
+        raise SystemExit(rundata.returncode)

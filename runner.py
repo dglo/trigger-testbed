@@ -68,6 +68,14 @@ class RunData(object):
         """Return the signal which caused the program to be killed (or None)"""
         return self.__killsig
 
+    def process(self, line, is_stderr=False):
+        """Process a line of output from the program"""
+        if not is_stderr:
+            sys.stdout.write(line)
+            sys.stdout.flush()
+        else:
+            sys.stderr.write(line)
+
     def returncode(self):
         """Return the POSIX return code"""
         return self.__returncode
@@ -138,16 +146,39 @@ class JavaRunner(object):
         self.__killsig = None
         self.__exitsig = None
 
+    @classmethod
+    def __build_jar_name(cls, name, vers, extra=None):
+        """Build a versioned jar file name"""
+        if extra is None:
+            return name + "-" + vers + ".jar"
+        return name + "-" + vers + "-" + extra + ".jar"
+
+    @classmethod
+    def __distribution_path(cls, daq_release):
+        """Distribution directory"""
+        if cls.__DIST_RELEASE is None or cls.__DIST_RELEASE != daq_release:
+            # clear cached path
+            cls.__DIST_DIR = None
+
+            pdaq_home = cls.__pdaq_home()
+            if pdaq_home is not None:
+                tmpDir = os.path.join(pdaq_home, "target",
+                                      "pDAQ-" + daq_release + "-dist", "lib")
+                if os.path.exists(tmpDir):
+                    cls.__DIST_RELEASE = daq_release
+                    cls.__DIST_DIR = tmpDir
+        return cls.__DIST_DIR
+
     def __find_maven_jar(self, proj, name, vers, extra):
         """
         Find a jar file in the Maven repository which is at or after the
         version specified by 'vers'
         """
-        repo_dir = self.maven_repository_path()
+        repo_dir = self.__maven_repository_path()
         if repo_dir is None:
             return None
 
-        jarname = self.build_jar_name(name, vers, extra)
+        jarname = self.__build_jar_name(name, vers, extra)
 
         projdir = os.path.join(repo_dir, proj, name)
         if os.path.exists(projdir):
@@ -159,14 +190,14 @@ class JavaRunner(object):
             for entry in os.listdir(projdir):
                 nvers = LooseVersion(entry)
                 if overs < nvers:
-                    tmpjar = os.path.join(projdir, entry,
-                                          self.build_jar_name(name, entry))
+                    tmpname = self.__build_jar_name(name, entry)
+                    tmpjar = os.path.join(projdir, entry, tmpname)
                     if os.path.exists(tmpjar):
                         print >>sys.stderr, "WARNING: Using %s version %s" \
                             " instead of requested %s" % (name, entry, vers)
                         return tmpjar
 
-        dist_dir = self.distribution_path(self.__DEFAULT_DAQ_RELEASE)
+        dist_dir = self.__distribution_path(self.__DEFAULT_DAQ_RELEASE)
         if dist_dir is not None:
             tmpjar = os.path.join(dist_dir, jarname)
             if os.path.exists(tmpjar):
@@ -188,7 +219,7 @@ class JavaRunner(object):
         return None
 
     def __find_subproject_classes(self, proj, daq_release):
-        jarname = self.build_jar_name(proj, daq_release)
+        jarname = self.__build_jar_name(proj, daq_release)
 
         # check target/foo-X.Y.Z.jar (if we're in subproject dir)
         tgtjar = os.path.join("target", jarname)
@@ -215,21 +246,21 @@ class JavaRunner(object):
         if os.path.exists(projcls):
             return projcls
 
-        pdaq_home = self.pdaq_home()
+        pdaq_home = self.__pdaq_home()
         if pdaq_home is not None:
             # check $PDAQHOME/foo/target/foo-X.Y.Z.jar (possibly older version)
             tmpjar = os.path.join(pdaq_home, projjar)
             if os.path.exists(tmpjar):
                 return tmpjar
 
-        dist_dir = self.distribution_path()
+        dist_dir = self.__distribution_path(self.__DEFAULT_DAQ_RELEASE)
         if dist_dir is not None:
             # dist_dir is usually $PDAQHOME/target/pDAQ-X.Y.Z-dist/lib
             tmpjar = os.path.join(dist_dir, jarname)
             if os.path.exists(tmpjar):
                 return tmpjar
 
-        repo_dir = self.maven_repository_path()
+        repo_dir = self.__maven_repository_path()
         if repo_dir is not None:
             # check ~/.m2/repository/edu/wisc/icecube/foo/X.Y.Z/foo-X.Y.Z.jar
             tmpjar = os.path.join(repo_dir, self.__DAQ_REPO_SUBDIR, proj,
@@ -238,6 +269,24 @@ class JavaRunner(object):
                 return tmpjar
 
         return None
+
+    @classmethod
+    def __maven_repository_path(cls):
+        """Maven repository directory"""
+        if cls.__MAVEN_REPO is None and os.environ.has_key("HOME"):
+            tmpDir = os.path.join(os.environ["HOME"], ".m2", "repository")
+            if tmpDir is not None and os.path.exists(tmpDir):
+                cls.__MAVEN_REPO = tmpDir
+        return cls.__MAVEN_REPO
+
+    @classmethod
+    def __pdaq_home(cls):
+        """Current active pDAQ directory"""
+        if cls.__PDAQ_HOME is None and os.environ.has_key("PDAQ_HOME"):
+            tmpDir = os.environ["PDAQ_HOME"]
+            if tmpDir is not None and os.path.exists(tmpDir):
+                cls.__PDAQ_HOME = tmpDir
+        return cls.__PDAQ_HOME
 
     def __run_command(self, data, debug=False):
         """Run the Java program, tracking relevant run-related statistics"""
@@ -267,10 +316,10 @@ class JavaRunner(object):
             for fd in ret[0]:
                 if fd == self.__proc.stdout.fileno():
                     line = self.__proc.stdout.readline()
-                    self.process(line, False)
+                    data.process(line, False)
                 if fd == self.__proc.stderr.fileno():
                     line = self.__proc.stderr.readline()
-                    self.process(line, True)
+                    data.process(line, True)
 
             if self.__proc.poll() is not None:
                 break
@@ -298,9 +347,9 @@ class JavaRunner(object):
         """Add pDAQ jar files to CLASSPATH"""
         if daq_release is None:
             daq_release = self.__DEFAULT_DAQ_RELEASE
-        pdaq_home = self.pdaq_home()
-        dist_dir = self.distribution_path(daq_release)
-        repo_dir = self.maven_repository_path()
+        pdaq_home = self.__pdaq_home()
+        dist_dir = self.__distribution_path(daq_release)
+        repo_dir = self.__maven_repository_path()
 
         for pkg in pkgs:
             jar = self.__find_subproject_classes(pkg, daq_release)
@@ -325,63 +374,13 @@ class JavaRunner(object):
             if jar is None:
                 raise RunnerException(("Cannot find %s in local Maven" +
                                        " repository (%s)") %
-                                      (name, self.maven_repository_path()))
+                                      (name, self.__maven_repository_path()))
             self.__classes.append(jar)
             self.__classpath = None
-
-    @classmethod
-    def build_jar_name(cls, name, vers, extra=None):
-        """Build a versioned jar file name"""
-        if extra is None:
-            return name + "-" + vers + ".jar"
-        return name + "-" + vers + "-" + extra + ".jar"
-
-    @classmethod
-    def distribution_path(cls, daq_release):
-        """Distribution directory"""
-        if cls.__DIST_RELEASE is None or cls.__DIST_RELEASE != daq_release:
-            # clear cached path
-            cls.__DIST_DIR = None
-
-            pdaq_home = cls.pdaq_home()
-            if pdaq_home is not None:
-                tmpDir = os.path.join(pdaq_home, "target",
-                                      "pDAQ" + daq_release + "-dist", "lib")
-                if os.path.exists(tmpDir):
-                    cls.__DIST_RELEASE = daq_release
-                    cls.__DIST_DIR = tmpDir
-        return cls.__DIST_DIR
 
     def kill(self, sig):
         self.send_signal(sig, None)
         self.__killsig = sig
-
-    @classmethod
-    def maven_repository_path(cls):
-        """Maven repository directory"""
-        if cls.__MAVEN_REPO is None and os.environ.has_key("HOME"):
-            tmpDir = os.path.join(os.environ["HOME"], ".m2", "repository")
-            if tmpDir is not None and os.path.exists(tmpDir):
-                cls.__MAVEN_REPO = tmpDir
-        return cls.__MAVEN_REPO
-
-    @classmethod
-    def pdaq_home(cls):
-        """Current active pDAQ directory"""
-        if cls.__PDAQ_HOME is None and os.environ.has_key("PDAQ_HOME"):
-            tmpDir = os.environ["PDAQ_HOME"]
-            if tmpDir is not None and os.path.exists(tmpDir):
-                cls.__PDAQ_HOME = tmpDir
-        return cls.__PDAQ_HOME
-
-    @classmethod
-    def process(cls, line, is_stderr=False):
-        """Process a line of output from the program"""
-        if not is_stderr:
-            sys.stdout.write(line)
-            sys.stdout.flush()
-        else:
-            sys.stderr.write(line)
 
     def quickexit(self, sig, frame):
         """Kill the program if we get an interrupt signal"""

@@ -20,12 +20,11 @@ from runner import JavaRunner
 MAIN_CLASS = "icecube.daq.testbed.TestBed"
 
 # Java max memory
-JAVA_ARGS = "-Xmx4000m"
+JAVA_ARGS = ("-Xmx4000m", "-Dicecube.sndaq.ignore", )
 
 # required jar files from subprojects and Maven repository
 SUBPROJECT_PKGS = ("daq-common", "splicer", "payload", "daq-io", "juggler",
-                   "trigger-common", "oldtrigger", "trigger",
-                   "trigger-testbed")
+                   "trigger", "trigger-testbed")
 REPO_PKGS = (("log4j", "log4j", "1.2.7"),
              ("commons-logging", "commons-logging", "1.0.4"),
              ("edu/wisc/icecube", "icebucket", "3.0.2"),
@@ -448,14 +447,23 @@ class TriggerRunner(JavaRunner):
         self.add_subproject_jars(SUBPROJECT_PKGS)
         self.add_repo_jars(REPO_PKGS)
 
-    def __backup_output(self, rev, comp, num_hits, rcname, suffix):
-        if os.path.exists(self.__wrapname):
-            os.rename(self.__wrapname, "wrap-%s-%s-%d-%s.%s" %
-                      (rev, comp, num_hits, rcname, suffix))
+    def __backup_output(self, comp, num_hits, rcname, suffix):
+        if not os.path.exists(self.__wrapname):
+            return None
+
+        newname = "wrap-%s-%d-%s.%s" % (comp, num_hits, rcname, suffix)
+        os.rename(self.__wrapname, newname)
+        return newname
 
     def __cleanup_output(self):
         if os.path.exists(self.__wrapname):
             os.remove(self.__wrapname)
+
+    def __is_empty_output(self):
+        if os.path.exists(self.__wrapname) and \
+            os.path.getsize(self.__wrapname) > 0:
+            return False
+        return True
 
     @classmethod
     def __print(cls, log, msg):
@@ -490,9 +498,8 @@ class TriggerRunner(JavaRunner):
             self.__thread.stop_run()
             self.__fd.close()
 
-    def run_all(self, log, cfg_lister, target_dir, old_new_list, type_list,
-                run_num, num_hits_list, run_old=False, verbose=False,
-                debug=False):
+    def run_all(self, log, cfg_lister, target_dir, type_list, run_num,
+                num_hits_list, run_old=False, verbose=False, debug=False):
         for rc in cfg_lister.list():
             if rc.skip():
                 if verbose:
@@ -501,86 +508,57 @@ class TriggerRunner(JavaRunner):
             if not rc.usable():
                 continue
 
-            for old in old_new_list:
-                if old is None:
+            for ttype in type_list:
+                if ttype is None:
                     continue
 
-                if old:
-                    prefix = "Old"
-                    comprev = "old"
+                if ttype == self.IN_ICE:
+                    comptype = "in-ice"
+                    filetype = "iit"
+                    maxhubs = rc.inice_hubs()
+                    comp_in_cfg = rc.inice()
+                    comp = "IniceTriggerComponent"
+                elif ttype == self.ICETOP:
+                    comptype = "icetop"
+                    filetype = "itt"
+                    maxhubs = rc.icetop_hubs()
+                    comp_in_cfg = rc.icetop()
+                    comp = "IcetopTriggerComponent"
+                elif ttype == self.GLOBAL:
+                    comptype = "global"
+                    filetype = "glbl"
+                    maxhubs = rc.global_hubs()
+                    comp_in_cfg = True
+                    comp = "GlobalTriggerComponent"
                 else:
-                    prefix = ""
-                    comprev = "new"
+                    print "Unknown trigger type " + str(ttype)
+                    break
 
-                for ttype in type_list:
-                    if ttype is None:
-                        continue
+                if not comp_in_cfg:
+                    continue
 
-                    if ttype == self.IN_ICE:
-                        comptype = "in-ice"
-                        filetype = "iit"
-                        maxhubs = rc.inice_hubs()
-                        comp_in_cfg = rc.inice()
-                        comp = prefix + "IniceTriggerComponent"
-                    elif ttype == self.ICETOP:
-                        comptype = "icetop"
-                        filetype = "itt"
-                        maxhubs = rc.icetop_hubs()
-                        comp_in_cfg = rc.icetop()
-                        comp = prefix + "IcetopTriggerComponent"
-                    elif ttype == self.GLOBAL:
-                        comptype = "global"
-                        filetype = "glbl"
-                        maxhubs = rc.global_hubs()
-                        comp_in_cfg = True
-                        comp = prefix + "GlobalTriggerComponent"
-                    else:
-                        print "Unknown trigger type " + str(ttype)
-                        break
+                for num_hits in num_hits_list:
+                    dataname = "rc%s-%s-r%d-h%d-p%d.dat" % \
+                        (rc.hash(), filetype, run_num, maxhubs, num_hits)
+                    datapath = os.path.join(target_dir, dataname)
+                    self.run_one(log, target_dir, rc, ttype, run_num,
+                                 num_hits, debug=debug)
 
-                    if not comp_in_cfg:
-                        continue
-
-                    for num_hits in num_hits_list:
-                        dataname = "rc%s-%s-r%d-h%d-p%d.dat" % \
-                            (rc.hash(), filetype, run_num, maxhubs, num_hits)
-                        datapath = os.path.join(target_dir, dataname)
-                        if old and not run_old and os.path.exists(datapath):
-                            msg = "    %s %s skipped (%s exists)" % \
-                                (comprev, comptype, dataname)
-                            self.__print(log, msg)
-                            continue
-                        elif not old and not os.path.exists(datapath):
-                            msg = "    %s %s skipped (%s is missing)" % \
-                                (comprev, comptype, dataname)
-                            self.__print(log, msg)
-                            break
-
-                        self.run_one(log, target_dir, rc, old, ttype,
-                                     run_num, num_hits, debug=debug)
-
-    def run_one(self, log, target_dir, rc, use_old_comp, trigtype, run_num,
+    def run_one(self, log, target_dir, rc, trigtype, run_num,
                 num_hits, debug=False):
         try:
             java_args = JAVA_ARGS
         except NameError:
             java_args = None
 
-        if use_old_comp:
-            prefix = "Old"
-            comprev = "old"
-        else:
-            prefix = ""
-            comprev = "new"
-
         if trigtype == self.IN_ICE:
-            comp = prefix + "IniceTriggerComponent"
+            comp = "IniceTriggerComponent"
             comptype = "inice"
         elif trigtype == self.ICETOP:
-            comp = prefix + "IcetopTriggerComponent"
+            comp = "IcetopTriggerComponent"
             comptype = "icetop"
         elif trigtype == self.GLOBAL:
-            comp = prefix + "GlobalTriggerComponent"
+            comp = "GlobalTriggerComponent"
             comptype = "global"
         else:
             print "Unknown trigger type %s" % trigtype
@@ -601,7 +579,7 @@ class TriggerRunner(JavaRunner):
 
         rundata = self.run(java_args, args, debug=debug)
 
-        if rundata.exit_signal() is not None:
+        if rundata.exit_signal is not None:
             print "EMERGENCY EXIT"
             self.__cleanup_output()
             raise SystemExit(1)
@@ -609,47 +587,45 @@ class TriggerRunner(JavaRunner):
         rpt = self.report()
         if rpt is None:
             rpt = "No report"
-            self.__backup_output(comprev, comptype, num_hits,
-                                 rc.name(), "norpt")
+            if not self.__is_empty_output():
+                self.__backup_output(comptype, num_hits, rc.name(), "norpt")
         else:
             if rpt.startswith("Consumer "):
                 rpt = rpt[9:]
             if rpt.endswith(", not stopped"):
                 rpt = rpt[:-13]
 
-        if rundata.returncode() is None:
+        if rundata.returncode is None:
             failed = ""
-        elif rundata.returncode() == 0:
+        elif rundata.returncode == 0:
             failed = ""
         else:
-            if rundata.returncode() == 1:
+            if rundata.returncode == 1:
                 failed = "  !!FAILED!!"
             else:
-                failed = "  !!FAIL %d!!" % rundata.returncode()
-            self.__backup_output(comprev, comptype, num_hits,
-                                 rc.name(), "fail")
+                failed = "  !!FAIL %d!!" % rundata.returncode
+            self.__backup_output(comptype, num_hits, rc.name(), "fail")
 
         self.__cleanup_output()
 
-        if rundata.run_time() is None:
+        if rundata.run_time is None:
             run_time = 0.0
         else:
-            run_time = rundata.run_time()
+            run_time = rundata.run_time
 
-        if rundata.wait_time() is None or \
-           rundata.wait_time() < 2:
+        if rundata.wait_time is None or \
+           rundata.wait_time < 2:
             waitstr = ""
         else:
-            waitstr = ", waited %.2f" % rundata.wait_time()
+            waitstr = ", waited %.2f" % rundata.wait_time
 
-        if rundata.kill_signal() is None:
+        if rundata.kill_signal is None:
             killed = ""
         else:
-            killed = "  !!KILLED %s!!" % rundata.kill_signal()
+            killed = "  !!KILLED %s!!" % rundata.kill_signal
 
-        msg = "    %s %s %d hits %.0f secs%s: %s  %s%s" % \
-              (comprev, comptype, num_hits, run_time, waitstr,
-               rpt, killed, failed)
+        msg = "    %s %d hits %.0f secs%s: %s  %s%s" % \
+              (comptype, num_hits, run_time, waitstr, rpt, killed, failed)
         self.__print(log, msg)
 
     def stop_threads(self):

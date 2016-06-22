@@ -1,6 +1,5 @@
 package icecube.daq.testbed;
 
-import icecube.daq.io.PayloadByteReader;
 import icecube.daq.payload.IHitPayload;
 import icecube.daq.payload.IPayload;
 import icecube.daq.payload.IReadoutRequest;
@@ -8,9 +7,9 @@ import icecube.daq.payload.IReadoutRequestElement;
 import icecube.daq.payload.ITriggerRequestPayload;
 import icecube.daq.payload.PayloadException;
 import icecube.daq.payload.SourceIdRegistry;
+import icecube.daq.payload.impl.BasePayload;
 import icecube.daq.payload.impl.PayloadFactory;
 import icecube.daq.payload.impl.ReadoutRequestElement;
-import icecube.daq.trigger.common.ITriggerAlgorithm;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,63 +19,20 @@ import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.log4j.Logger;
 
-/**
- * Consumer which compares payloads against a previously generated file.
- */
-public class CompareConsumer
-    extends Consumer
+public class PayloadComparison
 {
-    /** Log object for this class */
-    private static final Log LOG = LogFactory.getLog(CompareConsumer.class);
+    private static final Logger LOG =
+        Logger.getLogger(PayloadComparison.class);
 
     /** Indentation for parts of trigger request string */
     private static final String INDENT_STEP = "    ";
 
-    private PayloadByteReader rdr;
-    private int payloadCount;
+    private static int throughputType = Integer.MIN_VALUE;
 
-    private PayloadFactory factory;
-
-    private int throughputType = Integer.MIN_VALUE;
-
-    /**
-     * Create a comparison consumer.
-     *
-     * @param outFile output file
-     * @param chanIn input channel
-     *
-     * @throws IOException if there is a problem
-     */
-    public CompareConsumer(File outFile, ReadableByteChannel chanIn)
-        throws IOException
-    {
-        super(outFile.getName(), chanIn);
-
-        rdr = new PayloadByteReader(outFile);
-    }
-
-    void close()
-        throws IOException
-    {
-        // count the number of expected payloads which were not sent
-        for (ByteBuffer buf = rdr.next(); buf != null && !isStopMessage(buf);
-             buf = rdr.next())
-        {
-            foundMissed();
-        }
-
-        try {
-            rdr.close();
-        } finally {
-            super.close();
-        }
-    }
-
-    private boolean compareHit(IHitPayload exp, IHitPayload got,
-                               boolean exact, boolean reportError)
+    private static boolean compareHit(IHitPayload exp, IHitPayload got,
+                                      boolean exact, boolean reportError)
     {
         if (!compareLong("CompareHitTime", exp.getHitTimeUTC().longValue(),
                          got.getHitTimeUTC().longValue(), reportError))
@@ -101,8 +57,8 @@ public class CompareConsumer
         return true;
     }
 
-    private boolean compareInt(String fldName, int exp, int got,
-                               boolean reportError)
+    private static boolean compareInt(String fldName, int exp, int got,
+                                      boolean reportError)
     {
         if (exp != got) {
             if (reportError) {
@@ -116,7 +72,7 @@ public class CompareConsumer
         return true;
     }
 
-    private boolean compareLong(String fldName, long exp, long got,
+    private static boolean compareLong(String fldName, long exp, long got,
                                 boolean reportError)
     {
         if (exp != got) {
@@ -131,20 +87,43 @@ public class CompareConsumer
         return true;
     }
 
-    private boolean comparePayloads(PrintStream out, ByteBuffer expBuf,
-                                    ByteBuffer gotBuf)
+    public static boolean comparePayloads(PrintStream out,
+                                          ITriggerRequestPayload exp,
+                                          ITriggerRequestPayload got)
     {
-        ITriggerRequestPayload exp = getPayload(expBuf);
-        ITriggerRequestPayload got = getPayload(gotBuf);
-        setLastUTCTime(got.getUTCTime());
-        return dumpPayloads(out, exp, got, true);
+        final boolean reportError = true;
+        final boolean reportLooseMatch = false;
+
+        try {
+            try {
+                if (!compareTriggerRequest(exp, got, reportError,
+                                           reportLooseMatch))
+                {
+                    out.println("EXP ----\n" + getTrigReqString(exp));
+                    out.println("GOT ----\n" + getTrigReqString(got));
+
+                    return false;
+                }
+            } finally {
+                if (got != null) {
+                    got.recycle();
+                }
+            }
+        } finally {
+            if (exp != null) {
+                exp.recycle();
+            }
+        }
+
+        return true;
     }
 
-    private boolean compareReadoutRequest(IReadoutRequest exp,
-                                          IReadoutRequest got,
-                                          boolean checkUID,
-                                          boolean ignoreLastTimeErrors,
-                                          boolean reportError)
+
+    private static boolean compareReadoutRequest(IReadoutRequest exp,
+                                                 IReadoutRequest got,
+                                                 boolean checkUID,
+                                                 boolean ignoreLastTimeErrors,
+                                                 boolean reportError)
     {
         final boolean mergeHack = false;
 
@@ -222,10 +201,11 @@ public class CompareConsumer
         return true;
     }
 
-    private boolean compareReadoutRequestElement(IReadoutRequestElement exp,
-                                                 IReadoutRequestElement got,
-                                                 boolean ignoreLastTimeErrors,
-                                                 boolean reportError)
+    private static boolean
+        compareReadoutRequestElement(IReadoutRequestElement exp,
+                                     IReadoutRequestElement got,
+                                     boolean ignoreLastTimeErrors,
+                                     boolean reportError)
     {
         if (!compareInt("CompareRREType", exp.getReadoutType(),
                         got.getReadoutType(), reportError))
@@ -261,10 +241,10 @@ public class CompareConsumer
         return true;
     }
 
-    private boolean compareTriggerRequest(ITriggerRequestPayload exp,
-                                          ITriggerRequestPayload got,
-                                          boolean reportError,
-                                          boolean reportLooseMatch)
+    public static boolean compareTriggerRequest(ITriggerRequestPayload exp,
+                                                ITriggerRequestPayload got,
+                                                boolean reportError,
+                                                boolean reportLooseMatch)
     {
         if (!compareLong("UTCTime", exp.getUTCTime(), got.getUTCTime(),
                          reportError))
@@ -456,85 +436,7 @@ public class CompareConsumer
         return true;
     }
 
-    public void configure(List<ITriggerAlgorithm> algorithms)
-    {
-        for (ITriggerAlgorithm a : algorithms) {
-            if (a.getTriggerName().startsWith("Throughput")) {
-                throughputType = a.getTriggerType();
-            }
-        }
-    }
-
-    private boolean dumpPayloads(PrintStream out, ITriggerRequestPayload exp,
-                                 ITriggerRequestPayload got, boolean compare)
-    {
-        final boolean reportError = true;
-        final boolean reportLooseMatch = false;
-
-        try {
-            try {
-                if (compare && (exp == null || got == null)) {
-                    if (exp != got) {
-                        LOG.error("DumpPayloads: exp " + exp +
-                                  " got " + got);
-                        return false;
-                    }
-
-                    return true;
-                }
-
-                if (!compare || !compareTriggerRequest(exp, got, reportError,
-                                                       reportLooseMatch))
-                {
-                    out.println("EXP ----\n" + getTrigReqString(exp));
-                    out.println("GOT ----\n" + getTrigReqString(got));
-
-                    return false;
-                }
-            } finally {
-                if (got != null) {
-                    got.recycle();
-                }
-            }
-        } finally {
-            if (exp != null) {
-                exp.recycle();
-            }
-        }
-
-        return true;
-    }
-
-    String getReportVerb()
-    {
-        return "compared";
-    }
-
-    private ITriggerRequestPayload getPayload(ByteBuffer buf)
-    {
-        if (factory == null) {
-            factory = new PayloadFactory(null);
-        }
-
-        ITriggerRequestPayload pay;
-        try {
-            pay = (ITriggerRequestPayload) factory.getPayload(buf, 0);
-        } catch (PayloadException ex) {
-            LOG.error("Cannot get payload", ex);
-            return null;
-        }
-
-        try {
-            pay.loadPayload();
-        } catch (Exception ex) {
-            LOG.error("Cannot load payload", ex);
-            return null;
-        }
-
-        return pay;
-    }
-
-    private String getRdoutReqString(IReadoutRequest rr, String indent)
+    private static String getRdoutReqString(IReadoutRequest rr, String indent)
     {
         StringBuilder buf = new StringBuilder();
 
@@ -562,12 +464,13 @@ public class CompareConsumer
         return buf.toString();
     }
 
-    private String getTrigReqString(ITriggerRequestPayload tr)
+    private static String getTrigReqString(ITriggerRequestPayload tr)
     {
         return getTrigReqString(tr, INDENT_STEP);
     }
 
-    private String getTrigReqString(ITriggerRequestPayload tr, String indent)
+    private static String getTrigReqString(ITriggerRequestPayload tr,
+                                           String indent)
     {
         if (tr == null) {
             return indent + "!!! NULL TriggerRequest !!!";
@@ -611,8 +514,8 @@ public class CompareConsumer
      *
      * @return <tt>true</tt> if the requests look similar.
      */
-    private boolean lookSimilar(ITriggerRequestPayload exp,
-                                ITriggerRequestPayload got)
+    private static boolean lookSimilar(ITriggerRequestPayload exp,
+                                       ITriggerRequestPayload got)
     {
         if (!compareLong("UTCTime", exp.getUTCTime(), got.getUTCTime(),
                          false))
@@ -698,41 +601,8 @@ public class CompareConsumer
         return merged;
     }
 
-    void write(ByteBuffer buf)
-        throws IOException
+    public static void setThroughputType(int val)
     {
-        final PrintStream out = System.out;
-
-        if (buf == null) {
-            throw new IOException("Cannot write null payload");
-        }
-
-        if (buf.limit() < 4) {
-            throw new IOException("Payload #" + payloadCount + " should be" +
-                                  " at least 4 bytes long");
-        }
-
-        payloadCount++;
-
-        ByteBuffer expBuf = rdr.next();
-        if (expBuf == null) {
-            if (isStopMessage(buf)) {
-                // we're at the end of the file and saw a stop message
-            } else {
-                // got an extra payload
-                foundExtra();
-            }
-        } else if (isStopMessage(buf)) {
-            // check for stop message
-            if (!isStopMessage(expBuf)) {
-                throw new IOException("Payload #" + payloadCount +
-                                      " is a premature stop message");
-            }
-
-            setSawStop();
-        } else if (!comparePayloads(out, expBuf, buf)) {
-            throw new IOException("Payload #" + payloadCount +
-                                  " comparison failed");
-        }
+        throughputType = val;
     }
 }
