@@ -126,11 +126,14 @@ public abstract class DAQTestUtil
         tempFile.deleteOnExit();
 
         FileWriter out = new FileWriter(tempFile);
-        out.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-        out.write("<runConfig>\n");
-        out.write("<triggerConfig>" + baseName + "</triggerConfig>\n");
-        out.write("</runConfig>\n");
-        out.close();
+        try {
+            out.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+            out.write("<runConfig>\n");
+            out.write("<triggerConfig>" + baseName + "</triggerConfig>\n");
+            out.write("</runConfig>\n");
+        } finally {
+            out.close();
+        }
 
         return tempFile;
     }

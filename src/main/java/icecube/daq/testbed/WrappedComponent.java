@@ -16,7 +16,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.channels.Pipe;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -378,23 +377,23 @@ public abstract class WrappedComponent
 
         comp.started(runNum);
 
-        String prefix;
+        String abbreviation;
         if (getSourceID() == SourceIdRegistry.INICE_TRIGGER_SOURCE_ID) {
-            prefix = "II";
+            abbreviation = "II";
         } else if (getSourceID() ==
                    SourceIdRegistry.ICETOP_TRIGGER_SOURCE_ID)
         {
-            prefix = "IT";
+            abbreviation = "IT";
         } else if (getSourceID() ==
                    SourceIdRegistry.GLOBAL_TRIGGER_SOURCE_ID)
         {
-            prefix = "GL";
+            abbreviation = "GL";
         } else {
-            prefix = "XX#" + getSourceID();
+            abbreviation = "XX#" + getSourceID();
         }
 
-        ComponentMonitor activity = new ComponentMonitor(comp, prefix, bridges,
-                                                         consumer,
+        ComponentMonitor activity = new ComponentMonitor(comp, abbreviation,
+                                                         bridges, consumer,
                                                          maxFailures);
 
         if (LOG.isInfoEnabled()) {

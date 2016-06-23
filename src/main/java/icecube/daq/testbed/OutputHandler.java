@@ -6,9 +6,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
-import java.util.List;
 
 /**
  * Consume payloads in some way (write to a file, compare against an
@@ -27,7 +25,6 @@ public class OutputHandler
      * Create a payload output handler.
      *
      * @param outFile output file name
-     * @param chanIn channel from which payloads are read
      *
      * @throws IOException if there is a problem
      */

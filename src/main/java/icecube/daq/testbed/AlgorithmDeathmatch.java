@@ -147,7 +147,6 @@ public class AlgorithmDeathmatch
     private CodeTimer oldTimer = new CodeTimer(100);
 
     private PayloadSubscriber subscriber;
-    private ITriggerManager mgr;
 
     public AlgorithmDeathmatch(ITriggerAlgorithm newAlgorithm,
                                ITriggerAlgorithm oldAlgorithm)

@@ -5,17 +5,10 @@ import icecube.daq.payload.IPayload;
 import icecube.daq.payload.IReadoutRequest;
 import icecube.daq.payload.IReadoutRequestElement;
 import icecube.daq.payload.ITriggerRequestPayload;
-import icecube.daq.payload.PayloadException;
 import icecube.daq.payload.SourceIdRegistry;
-import icecube.daq.payload.impl.BasePayload;
-import icecube.daq.payload.impl.PayloadFactory;
 import icecube.daq.payload.impl.ReadoutRequestElement;
 
-import java.io.File;
-import java.io.IOException;
 import java.io.PrintStream;
-import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
 import java.util.List;
 

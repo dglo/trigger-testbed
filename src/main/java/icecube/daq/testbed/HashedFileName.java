@@ -17,9 +17,8 @@ public abstract class HashedFileName
      *
      * @return short string
      */
-    private static final String getShortComponent(int srcId)
+    private static String getShortComponent(int srcId)
     {
-        String handlerType;
         switch (srcId) {
         case SourceIdRegistry.INICE_TRIGGER_SOURCE_ID:
             return "iit";

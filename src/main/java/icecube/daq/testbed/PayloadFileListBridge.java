@@ -6,9 +6,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.WritableByteChannel;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 /**
  * An output bridge which reads payloads from a list of files qnd writes
  * them to an output channel.
@@ -16,9 +13,6 @@ import org.apache.commons.logging.LogFactory;
 public class PayloadFileListBridge
     extends AbstractPayloadFileListBridge
 {
-    private static final Log LOG =
-        LogFactory.getLog(PayloadFileListBridge.class);
-
     private WritableByteChannel chanOut;
 
     /**

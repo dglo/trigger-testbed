@@ -1,25 +1,16 @@
 package icecube.daq.testbed;
 
 import icecube.daq.io.PayloadByteReader;
-import icecube.daq.payload.IHitPayload;
-import icecube.daq.payload.IPayload;
-import icecube.daq.payload.IReadoutRequest;
-import icecube.daq.payload.IReadoutRequestElement;
 import icecube.daq.payload.ITriggerRequestPayload;
 import icecube.daq.payload.PayloadException;
-import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.payload.impl.BasePayload;
 import icecube.daq.payload.impl.PayloadFactory;
-import icecube.daq.payload.impl.ReadoutRequestElement;
 import icecube.daq.trigger.algorithm.ITriggerAlgorithm;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -53,10 +44,10 @@ public class CompareHandler
      *
      * @throws IOException if there is a problem
      */
-    public CompareHandler(File outFile)
+    public CompareHandler(File payloadFile)
         throws IOException
     {
-        rdr = new PayloadByteReader(outFile);
+        rdr = new PayloadByteReader(payloadFile);
     }
 
     public void close()

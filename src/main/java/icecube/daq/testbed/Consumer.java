@@ -1,18 +1,7 @@
 package icecube.daq.testbed;
 
-import icecube.daq.trigger.algorithm.ITriggerAlgorithm;
-
-import java.util.List;
-
 public interface Consumer
 {
-    /**
-     * Configure consumer using list of active trigger algorithms.
-     *
-     * @param algorithms list of active trigger algorithms
-     */
-    //void configure(List<ITriggerAlgorithm> algorithms);
-
     /**
      * Was the handler forced to stop?
      * @return <tt>true</tt> if handler was forced to stop

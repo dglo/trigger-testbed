@@ -1,9 +1,6 @@
 package icecube.daq.testbed;
 
-import icecube.daq.common.ANSIEscapeCode;
 import icecube.daq.juggler.component.DAQCompException;
-import icecube.daq.juggler.mbean.MemoryStatistics;
-import icecube.daq.splicer.HKN1Splicer;
 import icecube.daq.splicer.Splicer;
 import icecube.daq.trigger.algorithm.AlgorithmStatistics;
 import icecube.daq.trigger.component.DAQTriggerComponent;
@@ -11,10 +8,7 @@ import icecube.daq.trigger.component.DAQTriggerComponent;
 import java.io.PrintStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;

@@ -1,12 +1,9 @@
 package icecube.daq.testbed;
 
-import icecube.daq.trigger.algorithm.ITriggerAlgorithm;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SelectableChannel;
-import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

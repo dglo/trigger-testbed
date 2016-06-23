@@ -4,7 +4,6 @@ import icecube.daq.payload.IPayload;
 import icecube.daq.payload.PayloadException;
 import icecube.daq.payload.impl.PayloadFactory;
 import icecube.daq.payload.impl.TriggerRequestFactory;
-import icecube.daq.payload.impl.UTCTime;
 import icecube.daq.splicer.HKN1Splicer;
 import icecube.daq.splicer.SplicedAnalysis;
 import icecube.daq.splicer.Splicer;
@@ -14,26 +13,19 @@ import icecube.daq.splicer.SplicerListener;
 import icecube.daq.splicer.StrandTail;
 import icecube.daq.trigger.algorithm.AlgorithmStatistics;
 import icecube.daq.trigger.algorithm.ITriggerAlgorithm;
-import icecube.daq.trigger.control.DummyPayload;
-import icecube.daq.trigger.control.ITriggerCollector;
-import icecube.daq.trigger.control.ITriggerManager;
 import icecube.daq.trigger.control.PayloadSubscriber;
 import icecube.daq.trigger.control.TriggerManager;
 import icecube.daq.trigger.control.TriggerThread;
 import icecube.daq.trigger.exceptions.ConfigException;
-import icecube.daq.trigger.exceptions.TriggerException;
 import icecube.daq.util.DOMRegistry;
 import icecube.daq.util.LocatePDAQ;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.lang.reflect.Constructor;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
 
 import org.apache.log4j.BasicConfigurator;
@@ -130,10 +122,10 @@ class AlgorithmMonitor
     private ArrayList<AlgorithmStatistics> statsList =
         new ArrayList<AlgorithmStatistics>();
 
-    public AlgorithmMonitor(ITriggerAlgorithm algorithm,
-                            AbstractPayloadFileListBridge[] bridges,
-                            PayloadSubscriber subscriber, Consumer consumer,
-                            int maxFailures)
+    AlgorithmMonitor(ITriggerAlgorithm algorithm,
+                     AbstractPayloadFileListBridge[] bridges,
+                     PayloadSubscriber subscriber, Consumer consumer,
+                     int maxFailures)
     {
         super(bridges, consumer, maxFailures);
 
@@ -503,12 +495,6 @@ public class TestAlgorithm
         //consumer.start();
 
         return consumer;
-    }
-
-    private Iterable<File> findFiles(File srcDir, int hubId, int runNum)
-        throws IOException
-    {
-        return Arrays.asList(SimpleHitFilter.listFiles(srcDir, hubId, runNum));
     }
 
     /**
@@ -926,8 +912,8 @@ public class TestAlgorithm
             System.out.println(deathmatch.getStats());
         }
 
-        final boolean noOutput = consumer.getNumberWritten() == 0 &&
-            consumer.getNumberFailed() == 0;
+        //final boolean noOutput = consumer.getNumberWritten() == 0 &&
+        //    consumer.getNumberFailed() == 0;
         //try {
         //    checkTriggerCaches(comp, noOutput, verbose);
         //} catch (Throwable thr) {

@@ -7,24 +7,12 @@ import icecube.daq.splicer.Splicer;
 import icecube.daq.trigger.algorithm.AlgorithmStatistics;
 
 import java.io.PrintStream;
-import java.lang.reflect.Array;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * Monitor all activity in this component.
  */
 public abstract class ActivityMonitor
 {
-    private static final Log LOG = LogFactory.getLog(ActivityMonitor.class);
-
     private static final long MAX_QUEUED = 100000;
 
     private static final long MAX_TIME_DIFF = 10000000000L;
@@ -182,78 +170,6 @@ public abstract class ActivityMonitor
      * @return trigger counts string
      */
     public abstract Iterable<AlgorithmStatistics> getAlgorithmStatistics();
-
-    private String getFakeDateString(int rep)
-    {
-        int min = rep * 5;
-
-        int hour;
-        if (min < 60) {
-            hour = 0;
-        } else {
-            hour = min / 60;
-            min %= 60;
-        }
-
-        int day;
-        if (hour < 24) {
-            day = 1;
-        } else {
-            day = (hour / 24) + 1;
-            hour %= 24;
-        }
-
-        int month = 0;
-        int year = 2012;
-
-        int[] monDays = {
-            31, 28, 31, 30, 31, 30, 31, 31, 31, 30, 31, 30, 31,
-        };
-        while (day > monDays[month]) {
-            day -= monDays[month];
-            month++;
-
-            if (month >= 12) {
-                year++;
-                month %= 12;
-            }
-        }
-
-        final String fmt = "%04d-%02d-%02d %02d:%02d:%02d.%06d";
-        return String.format(fmt, year, month + 1, day, hour, min, 0, 0);
-    }
-
-    private String getMBeanValueString(Object obj)
-    {
-        if (obj == null) {
-            return "null";
-        } else if (obj.getClass().isArray()) {
-            StringBuilder strBuf = new StringBuilder("[");
-            final int len = Array.getLength(obj);
-            for (int i = 0; i < len; i++) {
-                if (strBuf.length() > 1) {
-                    strBuf.append(", ");
-                }
-                strBuf.append(getMBeanValueString(Array.get(obj, i)));
-            }
-            strBuf.append("]");
-            return strBuf.toString();
-        } else if (obj.getClass().equals(HashMap.class)) {
-            StringBuilder strBuf = new StringBuilder("{");
-            HashMap map = (HashMap) obj;
-            for (Object key : map.keySet()) {
-                if (strBuf.length() > 1) {
-                    strBuf.append(", ");
-                }
-                strBuf.append('\'').append(getMBeanValueString(key));
-                strBuf.append("': ").append(getMBeanValueString(map.get(key)));
-            }
-            strBuf.append("}");
-            return strBuf.toString();
-        } else {
-            return obj.toString();
-        }
-    }
 
     public abstract String getMonitoredName();
 

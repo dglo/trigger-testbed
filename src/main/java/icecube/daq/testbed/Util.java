@@ -13,7 +13,7 @@ public final class Util
      *
      * @return stop message
      */
-    public static final ByteBuffer buildStopMessage(ByteBuffer stopBuf)
+    public static ByteBuffer buildStopMessage(ByteBuffer stopBuf)
     {
         if (stopBuf == null || stopBuf.capacity() < STOP_MESSAGE_LENGTH) {
             stopBuf = ByteBuffer.allocate(STOP_MESSAGE_LENGTH);
@@ -34,7 +34,7 @@ public final class Util
      *
      * @return <tt>true</tt> if this is a stop message
      */
-    public static final boolean isStopMessage(ByteBuffer buf)
+    public static boolean isStopMessage(ByteBuffer buf)
     {
         return buf.limit() == STOP_MESSAGE_LENGTH &&
             buf.getInt(0) == STOP_MESSAGE_LENGTH;

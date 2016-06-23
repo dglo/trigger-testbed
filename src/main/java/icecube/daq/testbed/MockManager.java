@@ -3,7 +3,6 @@ package icecube.daq.testbed;
 import icecube.daq.io.DAQComponentOutputProcess;
 import icecube.daq.juggler.alert.AlertQueue;
 import icecube.daq.payload.IPayload;
-import icecube.daq.payload.ITriggerRequestPayload;
 import icecube.daq.splicer.Splicer;
 import icecube.daq.trigger.algorithm.AlgorithmStatistics;
 import icecube.daq.trigger.algorithm.ITriggerAlgorithm;
@@ -14,7 +13,6 @@ public class MockManager
     implements ITriggerManager
 {
     private DOMRegistry reg;
-    private IPayload earliest;
 
     public void addTrigger(ITriggerAlgorithm x0)
     {
@@ -83,7 +81,7 @@ public class MockManager
 
     public void setEarliestPayloadOfInterest(IPayload pay)
     {
-        earliest = pay;
+        // ignored
     }
 
     public void setOutputEngine(DAQComponentOutputProcess x0)

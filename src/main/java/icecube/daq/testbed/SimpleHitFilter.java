@@ -157,6 +157,10 @@ public class SimpleHitFilter
      */
     public boolean equals(Object obj)
     {
+        if (obj == null) {
+            return false;
+        }
+
         return obj.getClass().getName().equals(getClass().getName());
     }
 

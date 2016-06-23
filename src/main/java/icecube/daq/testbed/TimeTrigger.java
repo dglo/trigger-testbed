@@ -1,6 +1,5 @@
 package icecube.daq.testbed;
 
-import icecube.daq.trigger.config.DomSetFactory;
 import icecube.daq.io.PayloadFileReader;
 import icecube.daq.payload.IPayload;
 import icecube.daq.payload.SourceIdRegistry;

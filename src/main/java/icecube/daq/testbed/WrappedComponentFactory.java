@@ -2,8 +2,6 @@ package icecube.daq.testbed;
 
 import icecube.daq.trigger.component.TriggerComponent;
 
-import java.lang.reflect.Constructor;
-
 /**
  * Wrap a common interface around a DAQ component.
  */
