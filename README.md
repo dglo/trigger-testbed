@@ -39,10 +39,14 @@ where the individual pieces are:
 An actual example might be
 `rcfe911132ed5c2f4b833d7ea3bc8e9058-iit-r120151-h69-p32800.dat`
 
-## Input file name format
+## Input file name formats
+
+### Old format
+
 The input files (which should be stored in a directory
-named `run`*&lt;runNumber&gt;*) have a specific name format, defined in
-`icecube.daq.testbed.SimpleHitFilter`:
+named `run`*&lt;runNumber&gt;*) must have a specific name format, defined in
+`icecube.daq.testbed.SimpleHitFilter`, which closely matches pDAQ's standard
+output file format used by `icecube.daq.io.FileDispatcher`:
 
 *&lt;hub&gt;*_&lt;hubNumber&gt;_`_simplehits_`*&lt;runNumber&gt;*`_`*&lt;sequenceNumber&gt;*`_`*&lt;firstHit&gt;*`_`*&lt;lastHit&gt;*`.dat`
 
@@ -66,9 +70,14 @@ where the individual pieces are:
 An example would be
 `run120151/ithub01_simplehits_120151_1_232482_463955.dat`
 
-## Helper scripts
+### New format
 
-There are a couple of helper scripts used to run the testbed.
+The new format is much more forgiving.  Files should be stored in a directory,
+preferably named `run#######`.  Files in that directory should be named for the
+hub which generated them (e.g. `ichub01`, `ithub11`) and each file should
+contain *all* the hits for the run.
+
+## Helper scripts
 
 #### `test-trigger.py`
 
@@ -80,6 +89,12 @@ There are a couple of helper scripts used to run the testbed.
 
 It's not much more than a wrapper around
 `icecube.daq.testbed.TestBed`.
+
+In the above case, it will run the in-ice trigger component with the algorithms
+specified by the trigger configuration pointed to in the
+`sps-IC86-remove-Carrot-and-Leif_Eriksson-V218` run configuration file.  It
+will use the first 10000 hits from the files in `~/prj/simplehits/run120151`
+as input.
 
 #### `test-all-triggers.py`
 
@@ -93,3 +108,22 @@ This script tries to locate output files associated with run
 configuration files, so any changes to
 `icecube.daq.testbed.HashedFileName` must be mirrored in the code
 deep inside MyRunner.run_all()
+
+
+#### `test-algorithm.py`
+
+The `test-algorithm.py` script tests a single algorithm.  It uses many of the
+same arguments as the `test-trigger.py` script.  For example:
+
+	./test-algorithm.py -c sps-IC86-2016-icetop-infill-V257 -T 1006 \
+		-d ./127429 -n 10000 -t tgt
+
+This will run the trigger with `triggerConfigId` 1006 (which is
+SimpleMajorityTrigger in this run config) using the first 10000 hits from
+each file in the `127429` subdirectory as inputs.  If a result file exists in
+the `tgt` subdirectory, it will check the new results against those in the file.
+If no matching file exists, it will create one.
+
+In the above example, the `-O` option could also be used to start up an
+`OldSimpleMajorityTrigger` algorithm alongside the `SimpleMajorityTrigger`
+algorithm and compare the results coming out of both to make sure they match.
