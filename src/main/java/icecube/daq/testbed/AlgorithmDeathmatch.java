@@ -22,6 +22,7 @@ import icecube.daq.util.DOMRegistry;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import org.apache.log4j.Logger;
 
@@ -148,6 +149,8 @@ public class AlgorithmDeathmatch
 
     private PayloadSubscriber subscriber;
 
+    private Random random = new Random();
+
     public AlgorithmDeathmatch(ITriggerAlgorithm newAlgorithm,
                                ITriggerAlgorithm oldAlgorithm)
     {
@@ -155,27 +158,59 @@ public class AlgorithmDeathmatch
         this.oldAlgorithm = oldAlgorithm;
     }
 
+    private ITriggerAlgorithm getRandomAlgorithm(boolean oldFirst, int index)
+    {
+        if (oldFirst) {
+            return (index == 0 ? oldAlgorithm : newAlgorithm);
+        }
+
+        return (index == 0 ? newAlgorithm : oldAlgorithm);
+    }
+
+    private CodeTimer getRandomTimer(boolean oldFirst, int index)
+    {
+        if (oldFirst) {
+            return (index == 0 ? oldTimer : newTimer);
+        }
+
+        return (index == 0 ? newTimer : oldTimer);
+    }
+
     public void addParameter(String name, String value)
         throws UnknownParameterException, IllegalParameterValueException
     {
-final int pos = 0;
-newTimer.start(pos); try {
-        newAlgorithm.addParameter(name, value);
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-        oldAlgorithm.addParameter(name, value);
-} finally { oldTimer.stop(pos); }
+        final int pos = 0;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            timer.start(pos);
+            try {
+                algo.addParameter(name, value);
+            } finally {
+                timer.stop(pos);
+            }
+        }
     }
 
     public void addReadout(int rdoutType, int offset, int minus, int plus)
     {
-final int pos = 1;
-newTimer.start(pos); try {
-        newAlgorithm.addReadout(rdoutType, offset, minus, plus);
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-        oldAlgorithm.addReadout(rdoutType, offset, minus, plus);
-} finally { oldTimer.stop(pos); }
+        final int pos = 1;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            timer.start(pos);
+            try {
+                algo.addReadout(rdoutType, offset, minus, plus);
+            } finally {
+                timer.stop(pos);
+            }
+        }
     }
 
     public int compareTo(ITriggerAlgorithm algorithm)
@@ -185,29 +220,52 @@ oldTimer.start(pos); try {
 
     public void flush()
     {
-final int pos = 2;
-newTimer.start(pos); try {
-        newAlgorithm.flush();
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-        oldAlgorithm.flush();
-} finally { oldTimer.stop(pos); }
+        final int pos = 2;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            timer.start(pos);
+            try {
+                algo.flush();
+            } finally {
+                timer.stop(pos);
+            }
+        }
     }
 
     public IPayload getEarliestPayloadOfInterest()
     {
-        IPayload oldPay, newPay;
-final int pos = 3;
-newTimer.start(pos); try {
-        newPay = newAlgorithm.getEarliestPayloadOfInterest();
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-        oldPay = oldAlgorithm.getEarliestPayloadOfInterest();
-} finally { oldTimer.stop(pos); }
+        final int pos = 3;
+
+        IPayload oldPay = null;
+        IPayload newPay = null;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            timer.start(pos);
+            try {
+                IPayload pay = algo.getEarliestPayloadOfInterest();
+                if (algo == oldAlgorithm) {
+                    oldPay = pay;
+                } else {
+                    newPay = pay;
+                }
+            } finally {
+                timer.stop(pos);
+            }
+        }
+
         if ((newPay == null && oldPay != null) || !newPay.equals(oldPay)) {
             System.err.println("MISMATCH in getEarliestPayloadOfInterest:" +
                                " old " + oldPay + ", new " + newPay);
         }
+
         return oldPay;
     }
 
@@ -222,21 +280,38 @@ oldTimer.start(pos); try {
 
     public Interval getInterval(Interval interval)
     {
-        Interval oldIval, newIval;
-final int pos = 5;
-        Interval saved = new Interval();
-        saved.start = interval.start;
-        saved.end = interval.end;
-newTimer.start(pos); try {
-        newIval = newAlgorithm.getInterval(interval);
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-        oldIval = oldAlgorithm.getInterval(saved);
-} finally { oldTimer.stop(pos); }
+        final int pos = 5;
+
+        Interval oldIval = null;
+        Interval newIval = null;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            Interval tmpIval = new Interval();
+            tmpIval.start = interval.start;
+            tmpIval.end = interval.end;
+
+            timer.start(pos);
+            try {
+                Interval ival = algo.getInterval(interval);
+                if (algo == oldAlgorithm) {
+                    oldIval = ival;
+                } else {
+                    newIval = ival;
+                }
+            } finally {
+                timer.stop(pos);
+            }
+        }
+
         if ((newIval == null && oldIval != null) || !newIval.equals(oldIval)) {
             System.err.println("MISMATCH in getInterval:" +
                                " old " + oldIval + ", new " + newIval);
         }
+
         return oldIval;
     }
 
@@ -247,18 +322,33 @@ oldTimer.start(pos); try {
 
     public int getNumberOfCachedRequests()
     {
-        int oldVal, newVal;
-final int pos = 7;
-newTimer.start(pos); try {
-        newVal = newAlgorithm.getNumberOfCachedRequests();
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-        oldVal = oldAlgorithm.getNumberOfCachedRequests();
-} finally { oldTimer.stop(pos); }
+        final int pos = 7;
+
+        int oldVal = Integer.MIN_VALUE, newVal = Integer.MIN_VALUE;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            timer.start(pos);
+            try {
+                int val = algo.getNumberOfCachedRequests();
+                if (algo == oldAlgorithm) {
+                    oldVal = val;
+                } else {
+                    newVal = val;
+                }
+            } finally {
+                timer.stop(pos);
+            }
+        }
+
         if (newVal != oldVal) {
             System.err.println("MISMATCH in getNumberOfCachedRequests:" +
                                " old " + oldVal + ", new " + newVal);
         }
+
         return oldVal;
     }
 
@@ -269,18 +359,33 @@ oldTimer.start(pos); try {
 
     public long getSentTriggerCount()
     {
-        long oldVal, newVal;
-final int pos = 9;
-newTimer.start(pos); try {
-        newVal = newAlgorithm.getSentTriggerCount();
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-        oldVal = oldAlgorithm.getSentTriggerCount();
-} finally { oldTimer.stop(pos); }
+        final int pos = 9;
+
+        long oldVal = Long.MIN_VALUE, newVal = Long.MIN_VALUE;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            timer.start(pos);
+            try {
+                long val = algo.getSentTriggerCount();
+                if (algo == oldAlgorithm) {
+                    oldVal = val;
+                } else {
+                    newVal = val;
+                }
+            } finally {
+                timer.stop(pos);
+            }
+        }
+
         if (newVal != oldVal) {
             System.err.println("MISMATCH in getSentTriggerCount:" +
                                " old " + oldVal + ", new " + newVal);
         }
+
         return oldVal;
     }
 
@@ -312,18 +417,33 @@ oldTimer.start(pos); try {
 
     public int getTriggerCounter()
     {
-        int oldVal, newVal;
-final int pos = 13;
-newTimer.start(pos); try {
-        newVal = newAlgorithm.getTriggerCounter();
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-        oldVal = oldAlgorithm.getTriggerCounter();
-} finally { oldTimer.stop(pos); }
+        final int pos = 13;
+
+        int oldVal = Integer.MIN_VALUE, newVal = Integer.MIN_VALUE;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            timer.start(pos);
+            try {
+                int val = algo.getTriggerCounter();
+                if (algo == oldAlgorithm) {
+                    oldVal = val;
+                } else {
+                    newVal = val;
+                }
+            } finally {
+                timer.stop(pos);
+            }
+        }
+
         if (newVal != oldVal) {
             System.err.println("MISMATCH in getTriggerCounter:" +
                                " old " + oldVal + ", new " + newVal);
         }
+
         return oldVal;
     }
 
@@ -344,18 +464,33 @@ oldTimer.start(pos); try {
 
     public boolean hasCachedRequests()
     {
-        boolean oldVal, newVal;
-final int pos = 16;
-newTimer.start(pos); try {
-        newVal = newAlgorithm.hasCachedRequests();
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-        oldVal = oldAlgorithm.hasCachedRequests();
-} finally { oldTimer.stop(pos); }
+        final int pos = 16;
+
+        boolean oldVal = false, newVal = false;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            timer.start(pos);
+            try {
+                boolean val = algo.hasCachedRequests();
+                if (algo == oldAlgorithm) {
+                    oldVal = val;
+                } else {
+                    newVal = val;
+                }
+            } finally {
+                timer.stop(pos);
+            }
+        }
+
         if (newVal != oldVal) {
             System.err.println("MISMATCH in hasCachedRequests:" +
                                " old " + oldVal + ", new " + newVal);
         }
+
         return oldVal;
     }
 
@@ -370,47 +505,83 @@ oldTimer.start(pos); try {
 
     public boolean hasValidMultiplicity()
     {
-        boolean oldVal, newVal;
-final int pos = 18;
-newTimer.start(pos); try {
-        newVal = newAlgorithm.hasValidMultiplicity();
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-        oldVal = oldAlgorithm.hasValidMultiplicity();
-} finally { oldTimer.stop(pos); }
+        final int pos = 18;
+
+        boolean oldVal = false, newVal = false;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            timer.start(pos);
+            try {
+                boolean val = algo.hasValidMultiplicity();
+                if (algo == oldAlgorithm) {
+                    oldVal = val;
+                } else {
+                    newVal = val;
+                }
+            } finally {
+                timer.stop(pos);
+            }
+        }
+
         if (newVal != oldVal) {
             System.err.println("MISMATCH in hasValidMultiplicity:" +
                                " old " + oldVal + ", new " + newVal);
         }
+
         return oldVal;
     }
 
     public boolean isConfigured()
     {
-        boolean oldVal, newVal;
-final int pos = 19;
-newTimer.start(pos); try {
-        newVal = newAlgorithm.isConfigured();
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-       oldVal = oldAlgorithm.isConfigured();
-} finally { oldTimer.stop(pos); }
+        final int pos = 19;
+
+        boolean oldVal = false, newVal = false;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            timer.start(pos);
+            try {
+                boolean val = algo.isConfigured();
+                if (algo == oldAlgorithm) {
+                    oldVal = val;
+                } else {
+                    newVal = val;
+                }
+            } finally {
+                timer.stop(pos);
+            }
+        }
+
         if (newVal != oldVal) {
             System.err.println("MISMATCH in isConfigured:" +
                                " old " + oldVal + ", new " + newVal);
         }
+
         return oldVal;
     }
 
     public void recycleUnusedRequests()
     {
-final int pos = 20;
-newTimer.start(pos); try {
-        newAlgorithm.recycleUnusedRequests();
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-        oldAlgorithm.recycleUnusedRequests();
-} finally { oldTimer.stop(pos); }
+        final int pos = 20;
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            timer.start(pos);
+            try {
+                algo.recycleUnusedRequests();
+            } finally {
+                timer.stop(pos);
+            }
+        }
     }
 
     public int release(Interval interval,
@@ -421,24 +592,38 @@ oldTimer.start(pos); try {
 
     public void resetAlgorithm()
     {
-final int pos = 22;
-newTimer.start(pos); try {
-        newAlgorithm.resetAlgorithm();
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-        oldAlgorithm.resetAlgorithm();
-} finally { oldTimer.stop(pos); }
+        final int pos = 22;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            timer.start(pos);
+            try {
+                algo.resetAlgorithm();
+            } finally {
+                timer.stop(pos);
+            }
+        }
     }
 
     public void resetUID()
     {
-final int pos = 23;
-newTimer.start(pos); try {
-        newAlgorithm.resetUID();
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-        oldAlgorithm.resetUID();
-} finally { oldTimer.stop(pos); }
+        final int pos = 23;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            timer.start(pos);
+            try {
+                algo.resetUID();
+            } finally {
+                timer.stop(pos);
+            }
+        }
     }
 
 private Object runLock = new Object();
@@ -446,26 +631,40 @@ private Object runLock = new Object();
     public void runTrigger(IPayload payload)
         throws TriggerException
     {
+        final int pos = 30;
+
         synchronized (runLock) {
-final int pos = 30;
-newTimer.start(pos); try {
-        newAlgorithm.runTrigger(payload);
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-        oldAlgorithm.runTrigger(payload);
-} finally { oldTimer.stop(pos); }
+            final boolean oldFirst = random.nextBoolean();
+            for (int i = 0; i < 2; i++) {
+                ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+                CodeTimer timer = getRandomTimer(oldFirst, i);
+
+                timer.start(pos);
+                try {
+                    algo.runTrigger(payload);
+                } finally {
+                    timer.stop(pos);
+                }
+            }
         }
     }
 
     public void sendLast()
     {
-final int pos = 40;
-newTimer.start(pos); try {
-        newAlgorithm.sendLast();
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-        oldAlgorithm.sendLast();
-} finally { oldTimer.stop(pos); }
+        final int pos = 40;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            timer.start(pos);
+            try {
+                algo.sendLast();
+            } finally {
+                timer.stop(pos);
+            }
+        }
     }
 
     private static void releaseAll(ITriggerAlgorithm algorithm,
@@ -487,8 +686,27 @@ oldTimer.start(pos); try {
 
     public void setChanged()
     {
-        releaseAll(oldAlgorithm, oldReleased);
-        releaseAll(newAlgorithm, newReleased);
+        final int pos = 42;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            List<ITriggerRequestPayload> released;
+            if (algo == oldAlgorithm) {
+                released = oldReleased;
+            } else {
+                released = newReleased;
+            }
+
+            timer.start(pos);
+            try {
+                releaseAll(algo, released);
+            } finally {
+                timer.stop(pos);
+            }
+        }
 
         while (!oldReleased.isEmpty() && !newReleased.isEmpty()) {
             ITriggerRequestPayload oldReq = oldReleased.remove(0);
@@ -503,13 +721,20 @@ oldTimer.start(pos); try {
 
     public void setSourceId(int srcId)
     {
-final int pos = 41;
-newTimer.start(pos); try {
-        newAlgorithm.setSourceId(srcId);
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-        oldAlgorithm.setSourceId(srcId);
-} finally { oldTimer.stop(pos); }
+        final int pos = 43;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            timer.start(pos);
+            try {
+                algo.setSourceId(srcId);
+            } finally {
+                timer.stop(pos);
+            }
+        }
     }
 
     public void setSubscriber(PayloadSubscriber subscriber)
@@ -530,24 +755,38 @@ oldTimer.start(pos); try {
 
     public void setTriggerConfigId(int cfgId)
     {
-final int pos = 44;
-newTimer.start(pos); try {
-        newAlgorithm.setTriggerConfigId(cfgId);
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-        oldAlgorithm.setTriggerConfigId(cfgId);
-} finally { oldTimer.stop(pos); }
+        final int pos = 46;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            timer.start(pos);
+            try {
+                algo.setTriggerConfigId(cfgId);
+            } finally {
+                timer.stop(pos);
+            }
+        }
     }
 
     public void setTriggerFactory(TriggerRequestFactory factory)
     {
-final int pos = 45;
-newTimer.start(pos); try {
-        newAlgorithm.setTriggerFactory(factory);
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-        oldAlgorithm.setTriggerFactory(factory);
-} finally { oldTimer.stop(pos); }
+        final int pos = 47;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            timer.start(pos);
+            try {
+                algo.setTriggerFactory(factory);
+            } finally {
+                timer.stop(pos);
+            }
+        }
     }
 
     public void setTriggerManager(ITriggerManager mgr)
@@ -559,24 +798,38 @@ oldTimer.start(pos); try {
 
     public void setTriggerName(String name)
     {
-final int pos = 47;
-newTimer.start(pos); try {
-        newAlgorithm.setTriggerName(name);
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-        oldAlgorithm.setTriggerName(name);
-} finally { oldTimer.stop(pos); }
+        final int pos = 49;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            timer.start(pos);
+            try {
+                algo.setTriggerName(name);
+            } finally {
+                timer.stop(pos);
+            }
+        }
     }
 
     public void setTriggerType(int trigType)
     {
-final int pos = 98;
-newTimer.start(pos); try {
-        newAlgorithm.setTriggerType(trigType);
-} finally { newTimer.stop(pos); }
-oldTimer.start(pos); try {
-        oldAlgorithm.setTriggerType(trigType);
-} finally { oldTimer.stop(pos); }
+        final int pos = 98;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            timer.start(pos);
+            try {
+                algo.setTriggerType(trigType);
+            } finally {
+                timer.stop(pos);
+            }
+        }
     }
 
     public void unsubscribe(SubscribedList list)
