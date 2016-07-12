@@ -39,9 +39,16 @@ where the individual pieces are:
 An actual example might be
 `rcfe911132ed5c2f4b833d7ea3bc8e9058-iit-r120151-h69-p32800.dat`
 
-## Input file name formats
+## Input files
 
-### Old format
+### Directory layout
+
+Files should be stored in a directory, preferably named `run#######`.  Files
+in that directory should be named for the hub which generated them
+(e.g. `ichub01`, `ithub11`) and each file should contain *all* the hits for
+the run.
+
+### Old directory layout
 
 The input files (which should be stored in a directory
 named `run`*&lt;runNumber&gt;*) must have a specific name format, defined in
@@ -70,16 +77,15 @@ where the individual pieces are:
 An example would be
 `run120151/ithub01_simplehits_120151_1_232482_463955.dat`
 
-### New format
-
-The new format is much more forgiving.  Files should be stored in a directory,
-preferably named `run#######`.  Files in that directory should be named for the
-hub which generated them (e.g. `ichub01`, `ithub11`) and each file should
-contain *all* the hits for the run.
-
 ## Helper scripts
 
-#### `test-trigger.py`
+### Converting HitSpool files to trigger hit files
+
+The `dash/SimplifyHits.py` script runs the `icecube.daq.io.HitSimplifier` Java
+code which filters out hits which would not be passed to the local triggers,
+converts them to the 38-byte SimpleHit format, then writes them to a file.
+
+### `test-trigger.py`
 
 `test_trigger.py` runs a single trigger, for example:
 
@@ -96,7 +102,7 @@ specified by the trigger configuration pointed to in the
 will use the first 10000 hits from the files in `~/prj/simplehits/run120151`
 as input.
 
-#### `test-all-triggers.py`
+### `test-all-triggers.py`
 
 The more exhaustive `test-all-triggers.py` script uses all the
 configurations in the run configuration directory to run all three
@@ -109,8 +115,7 @@ configuration files, so any changes to
 `icecube.daq.testbed.HashedFileName` must be mirrored in the code
 deep inside MyRunner.run_all()
 
-
-#### `test-algorithm.py`
+### `test-algorithm.py`
 
 The `test-algorithm.py` script tests a single algorithm.  It uses many of the
 same arguments as the `test-trigger.py` script.  For example:
