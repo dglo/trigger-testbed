@@ -27,8 +27,8 @@ public class PayloadComparison
     private static boolean compareHit(IHitPayload exp, IHitPayload got,
                                       boolean exact, boolean reportError)
     {
-        if (!compareLong("CompareHitTime", exp.getHitTimeUTC().longValue(),
-                         got.getHitTimeUTC().longValue(), reportError))
+        if (!compareLong("CompareHitTime", exp.getUTCTime(), got.getUTCTime(),
+                         reportError))
         {
             return false;
         }
