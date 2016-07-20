@@ -3,6 +3,7 @@ package icecube.daq.testbed;
 import icecube.daq.common.ANSIEscapeCode;
 import icecube.daq.trigger.exceptions.ConfigException;
 import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.IDOMRegistry;
 import icecube.daq.util.LocatePDAQ;
 
 import java.io.BufferedReader;
@@ -41,7 +42,7 @@ public class TestBed
     private boolean verbose;
     private boolean waitForInput;
 
-    private DOMRegistry registry;
+    private IDOMRegistry registry;
 
     /**
      * Create a testbed object.

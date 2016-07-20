@@ -18,6 +18,7 @@ import icecube.daq.trigger.control.TriggerManager;
 import icecube.daq.trigger.control.TriggerThread;
 import icecube.daq.trigger.exceptions.ConfigException;
 import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.IDOMRegistry;
 import icecube.daq.util.LocatePDAQ;
 
 import java.io.File;
@@ -417,7 +418,7 @@ public class TestAlgorithm
     private boolean verbose;
     private boolean compareOld;
 
-    private DOMRegistry registry;
+    private IDOMRegistry registry;
 
     /**
      * Create an algorithm testing object.

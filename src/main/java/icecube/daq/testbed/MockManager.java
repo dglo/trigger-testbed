@@ -7,12 +7,12 @@ import icecube.daq.splicer.Splicer;
 import icecube.daq.trigger.algorithm.AlgorithmStatistics;
 import icecube.daq.trigger.algorithm.ITriggerAlgorithm;
 import icecube.daq.trigger.control.ITriggerManager;
-import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.IDOMRegistry;
 
 public class MockManager
     implements ITriggerManager
 {
-    private DOMRegistry reg;
+    private IDOMRegistry reg;
 
     public void addTrigger(ITriggerAlgorithm x0)
     {
@@ -39,7 +39,7 @@ public class MockManager
         throw new Error("Unimplemented");
     }
 
-    public DOMRegistry getDOMRegistry()
+    public IDOMRegistry getDOMRegistry()
     {
         return reg;
     }
@@ -74,7 +74,7 @@ public class MockManager
         throw new Error("Unimplemented");
     }
 
-    public void setDOMRegistry(DOMRegistry reg)
+    public void setDOMRegistry(IDOMRegistry reg)
     {
         this.reg = reg;
     }

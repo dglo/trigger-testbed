@@ -18,6 +18,7 @@ import icecube.daq.trigger.exceptions.TriggerException;
 import icecube.daq.trigger.exceptions.UnknownParameterException;
 import icecube.daq.util.CodeTimer;
 import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.IDOMRegistry;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -61,7 +62,7 @@ class ManagerWrapper
         throw new Error("Unimplemented");
     }
 
-    public DOMRegistry getDOMRegistry()
+    public IDOMRegistry getDOMRegistry()
     {
         try {
             return DOMRegistry.loadRegistry();
@@ -100,7 +101,7 @@ class ManagerWrapper
         throw new Error("Unimplemented");
     }
 
-    public void setDOMRegistry(DOMRegistry x0)
+    public void setDOMRegistry(IDOMRegistry x0)
     {
         throw new Error("Unimplemented");
     }

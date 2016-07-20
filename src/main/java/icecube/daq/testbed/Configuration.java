@@ -7,6 +7,7 @@ import icecube.daq.trigger.config.DomSetFactory;
 import icecube.daq.trigger.exceptions.ConfigException;
 import icecube.daq.trigger.exceptions.TriggerException;
 import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.IDOMRegistry;
 import icecube.daq.util.JAXPUtil;
 import icecube.daq.util.JAXPUtilException;
 
@@ -196,13 +197,13 @@ public class Configuration
     private List<AlgorithmData> algorithmData;
 
     public Configuration(File configDir, String runCfgName,
-                         DOMRegistry registry)
+                         IDOMRegistry registry)
         throws ConfigException
     {
         this(buildFileName(configDir, runCfgName), registry);
     }
 
-    public Configuration(File file, DOMRegistry registry)
+    public Configuration(File file, IDOMRegistry registry)
         throws ConfigException
     {
         this.file = file;
@@ -716,7 +717,7 @@ public class Configuration
     {
         File configDir = new File("/Users/dglo/config");
 
-        DOMRegistry reg = DOMRegistry.loadRegistry();
+        IDOMRegistry reg = DOMRegistry.loadRegistry();
         for (int i = 0; i < args.length; i++) {
             Configuration cfg = new Configuration(configDir, args[i], reg);
             System.out.println("\"" + args[i] + "\" -> " + cfg);

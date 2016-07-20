@@ -10,6 +10,7 @@ import icecube.daq.trigger.control.ITriggerCollector;
 import icecube.daq.trigger.exceptions.TriggerException;
 import icecube.daq.util.CodeTimer;
 import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.IDOMRegistry;
 import icecube.daq.util.LocatePDAQ;
 
 import java.io.File;
@@ -56,7 +57,7 @@ public class TimeTrigger
     {
         final File cfgDir = LocatePDAQ.findConfigDirectory();
 
-        DOMRegistry reg;
+        IDOMRegistry reg;
         try {
             reg = DOMRegistry.loadRegistry(cfgDir);
         } catch (Exception ex) {

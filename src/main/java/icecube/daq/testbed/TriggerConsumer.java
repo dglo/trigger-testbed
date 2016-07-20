@@ -10,7 +10,7 @@ import icecube.daq.trigger.algorithm.ITriggerAlgorithm;
 import icecube.daq.trigger.control.ITriggerCollector;
 import icecube.daq.trigger.control.ITriggerManager;
 import icecube.daq.trigger.control.Interval;
-import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.IDOMRegistry;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -22,7 +22,7 @@ public class TriggerConsumer
 {
     private ITriggerAlgorithm algorithm;
     private ConsumerHandler handler;
-    private DOMRegistry domRegistry;
+    private IDOMRegistry domRegistry;
 
     private ArrayList<AlgorithmStatistics> statsList =
         new ArrayList<AlgorithmStatistics>(1);
@@ -32,7 +32,7 @@ public class TriggerConsumer
     private boolean forcedStop;
 
     public TriggerConsumer(ITriggerAlgorithm algorithm,
-                           ConsumerHandler handler, DOMRegistry domRegistry)
+                           ConsumerHandler handler, IDOMRegistry domRegistry)
     {
         this.algorithm = algorithm;
         this.handler = handler;
@@ -85,7 +85,7 @@ public class TriggerConsumer
         return statsList;
     }
 
-    public DOMRegistry getDOMRegistry()
+    public IDOMRegistry getDOMRegistry()
     {
         return domRegistry;
     }
@@ -191,7 +191,7 @@ public class TriggerConsumer
         }
     }
 
-    public void setDOMRegistry(DOMRegistry x0)
+    public void setDOMRegistry(IDOMRegistry x0)
     {
         throw new Error("Unimplemented");
     }
