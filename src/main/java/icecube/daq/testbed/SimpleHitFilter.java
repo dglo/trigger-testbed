@@ -17,7 +17,7 @@ public class SimpleHitFilter
     implements Comparator, FilenameFilter
 {
     private int runNum;
-    private String baseName;
+    private String hubBase;
     private String simpleBase;
     private String oldBase;
 
@@ -42,7 +42,7 @@ public class SimpleHitFilter
     SimpleHitFilter(String hubName, int runNum)
     {
         this.runNum = runNum;
-        this.baseName = hubName;
+        this.hubBase = hubName;
 
         final String simpleFront;
         if (!hubName.startsWith("ichub")) {
@@ -61,7 +61,7 @@ public class SimpleHitFilter
      */
     public boolean accept(File dir, String name)
     {
-        if (!name.startsWith(baseName) && !name.startsWith(simpleBase)) {
+        if (!name.startsWith(hubBase) && !name.startsWith(simpleBase)) {
             return false;
         }
 
@@ -93,7 +93,7 @@ public class SimpleHitFilter
             return oldBase;
         }
 
-        return baseName;
+        return hubBase;
     }
 
     /**
@@ -113,41 +113,49 @@ public class SimpleHitFilter
         String s1 = ((File) o1).getName();
         String s2 = ((File) o2).getName();
 
-        if (!s1.startsWith(baseName)) {
-            if (!s2.startsWith(baseName)) {
+        final int n1 = extractFileNumber(s1);
+        final int n2 = extractFileNumber(s2);
+        if (n1 == NO_NUMBER) {
+            if (n2 == NO_NUMBER) {
                 return s1.compareTo(s2);
             }
 
             return 1;
-        } else if (!s2.startsWith(baseName)) {
+        } else if (n2 == NO_NUMBER) {
             return -1;
         }
 
-        int end1 = s1.indexOf("_", baseName.length() + 1);
-        if (end1 < 0) {
-            return s1.compareTo(s2);
+        return n1 - n2;
+    }
+
+    private static final int NO_NUMBER = Integer.MIN_VALUE;
+
+    private int extractFileNumber(String name)
+    {
+        final int idx;
+        if (name.startsWith(oldBase)) {
+            idx = oldBase.length();
+        } else if (name.startsWith(simpleBase)) {
+            idx = simpleBase.length();
+        } else if (name.startsWith(hubBase)) {
+            idx = hubBase.length();
+        } else {
+            throw new Error("Cannot extract file number from \"" + name +
+                            "\" (hub \"" + hubBase + "\" old \"" + oldBase +
+                            "\" simple \"" + simpleBase + "\"");
         }
 
-        String sub1 = s1.substring(baseName.length(), end1);
-        int num1;
+        int end = name.indexOf("_", idx + 1);
+        String sub = name.substring(idx + 1, end);
+
         try {
-            num1 = Integer.parseInt(sub1);
+            return Integer.parseInt(sub);
         } catch (NumberFormatException nfe) {
-            throw new Error(String.format("Cannot parse \"%s\" from \"%s\"",
-                                          sub1, s1));
+            throw new Error("Cannot parse file number \"" + sub +
+                            "\" from \"" + name +
+                            "\" (hub \"" + hubBase + "\" old \"" + oldBase +
+                            "\" simple \"" + simpleBase + "\"");
         }
-
-        int end2 = s2.indexOf("_", baseName.length() + 1);
-        String sub2 = s2.substring(baseName.length(), end2);
-        int num2;
-        try {
-            num2 = Integer.parseInt(sub2);
-        } catch (NumberFormatException nfe) {
-            throw new Error(String.format("Cannot parse \"%s\" from \"%s\"",
-                                          sub2, s2));
-        }
-
-        return num1 - num2;
     }
 
     /**
