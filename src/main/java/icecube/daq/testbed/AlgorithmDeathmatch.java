@@ -17,7 +17,7 @@ import icecube.daq.trigger.exceptions.IllegalParameterValueException;
 import icecube.daq.trigger.exceptions.TriggerException;
 import icecube.daq.trigger.exceptions.UnknownParameterException;
 import icecube.daq.util.CodeTimer;
-import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.DOMRegistryFactory;
 import icecube.daq.util.IDOMRegistry;
 
 import java.util.ArrayList;
@@ -65,7 +65,7 @@ class ManagerWrapper
     public IDOMRegistry getDOMRegistry()
     {
         try {
-            return DOMRegistry.loadRegistry();
+            return DOMRegistryFactory.load();
         } catch (Exception ex) {
             throw new Error("Cannot load DOM registry", ex);
         }

@@ -17,7 +17,7 @@ import icecube.daq.trigger.control.PayloadSubscriber;
 import icecube.daq.trigger.control.TriggerManager;
 import icecube.daq.trigger.control.TriggerThread;
 import icecube.daq.trigger.exceptions.ConfigException;
-import icecube.daq.util.DOMRegistry;
+import icecube.daq.util.DOMRegistryFactory;
 import icecube.daq.util.IDOMRegistry;
 import icecube.daq.util.LocatePDAQ;
 
@@ -736,7 +736,7 @@ public class TestAlgorithm
         }
 
         try {
-            registry = DOMRegistry.loadRegistry(configDir);
+            registry = DOMRegistryFactory.load(configDir);
         } catch (Exception ex) {
             System.err.println("Cannot load DOM registry");
             ex.printStackTrace();
