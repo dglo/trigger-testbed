@@ -363,7 +363,7 @@ public class TestBed
             try {
                 maxSrcs = runCfg.getNumberOfSources(comp.getSourceID());
             } catch (ConfigException ce) {
-                System.err.println(ce.getMessage());
+                ce.printStackTrace();
                 maxSrcs = numSrcs;
                 usage = true;
             }

@@ -177,7 +177,7 @@ public abstract class WrappedComponent
         try {
             hubs = cfg.getHubs(srcId);
         } catch (ConfigException ce) {
-            throw new IOException(ce.getMessage());
+            throw new IOException("Cannot get hubs for " + srcId, ce);
         }
 
         if (hubs == null || hubs.size() < numSrcs) {
