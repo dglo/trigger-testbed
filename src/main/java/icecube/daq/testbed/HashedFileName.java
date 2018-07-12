@@ -78,8 +78,28 @@ public abstract class HashedFileName
                                        int runNumber, int numSrcs,
                                        int numToSkip, int numToProcess)
     {
-        return getName(runCfgName, srcId, runNumber, numSrcs, numToSkip,
+        return getName(runCfgName, srcId, runNumber, -1, numSrcs, numToSkip,
                        numToProcess, false);
+    }
+
+    /**
+     * Build a hashed filename.
+     *
+     * @param runCfgName run configuration filename
+     * @param srcId component source ID
+     * @param runNumber run number
+     * @param numSrcs number of sources used in the run
+     * @param numToSkip number of initial payloads skipped in the run
+     * @param numToProcess number of payloads processed in the run
+     *
+     * @return hashed filename
+     */
+    public static final String getName(String runCfgName, int srcId,
+                                       int runNumber, int trigId, int numSrcs,
+                                       int numToSkip, int numToProcess)
+    {
+        return getName(runCfgName, srcId, runNumber, trigId, numSrcs,
+                       numToSkip, numToProcess, false);
     }
 
     /**
@@ -100,6 +120,29 @@ public abstract class HashedFileName
                                        int numToSkip, int numToProcess,
                                        boolean useOldHash)
     {
+        return getName(runCfgName, srcId, runNumber, -1, numSrcs, numToSkip,
+                      numToProcess, useOldHash);
+    }
+
+    /**
+     * Build a hashed filename.
+     *
+     * @param runCfgName run configuration filename
+     * @param srcId component source ID
+     * @param runNumber run number
+     * @param trigId if greater than 0, ID of single trigger algorithm
+     * @param numSrcs number of sources used in the run
+     * @param numToSkip number of initial payloads skipped in the run
+     * @param numToProcess number of payloads processed in the run
+     * @param useOldHash if <tt>true</tt> use old hash algorithm
+     *
+     * @return hashed filename
+     */
+    public static final String getName(String runCfgName, int srcId,
+                                       int runNumber, int trigId, int numSrcs,
+                                       int numToSkip, int numToProcess,
+                                       boolean useOldHash)
+    {
         String cfgHash;
         if (useOldHash) {
             cfgHash = oldHashName(runCfgName);
@@ -109,17 +152,23 @@ public abstract class HashedFileName
 
         String compType = getShortComponent(srcId);
 
-        String name;
-        if (numToSkip == 0) {
-            name = "rc" + cfgHash + "-" + compType + "-r" + runNumber +
-                "-h" + numSrcs + "-p" + numToProcess + ".dat";
+        String trigStr;
+        if (trigId <= 0) {
+            trigStr = "";
         } else {
-            name = "rc" + cfgHash + "-" + compType + "-r" + runNumber +
-                "-h" + numSrcs + "-s" + numToSkip + "-p" + numToProcess +
-                ".dat";
+            trigStr = "-t" + trigId;
         }
 
-        return name;
+        String skipStr;
+        if (numToSkip == 0) {
+            skipStr = "";
+        } else {
+            skipStr = "-s" + numToSkip;
+        }
+
+        return "rc" + cfgHash + "-" + compType + "-r" + runNumber + trigStr +
+            "-h" + numSrcs + skipStr + "-p" + numToProcess +
+            ".dat";
     }
 
     /**

@@ -20,8 +20,9 @@ public abstract class ActivityMonitor
     private static final int PROGRESS_FREQUENCY = 100;
     private static final int MONITOR_FREQUENCY = 4;
 
+    protected Consumer consumer;
+
     private AbstractPayloadFileListBridge[] bridges;
-    private Consumer consumer;
     private int maxFailures;
 
     private long received;

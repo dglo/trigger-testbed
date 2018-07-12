@@ -188,6 +188,40 @@ class AlgorithmData
     }
 }
 
+class ConfigData
+{
+    int configId;
+    int sourceId;
+    String name;
+
+    ConfigData(AlgorithmData ad)
+    {
+        configId = ad.getConfigId();
+        sourceId = ad.getSourceId();
+        name = ad.getName();
+    }
+
+    public int getConfigId()
+    {
+        return configId;
+    }
+
+    public int getSourceId()
+    {
+        return sourceId;
+    }
+
+    public String getSourceName()
+    {
+        return SourceIdRegistry.getDAQNameFromSourceID(sourceId);
+    }
+
+    public String getName()
+    {
+        return name;
+    }
+}
+
 public class Configuration
 {
     private File file;
@@ -350,24 +384,6 @@ public class Configuration
         throw new ConfigException("Bad integer value \"" + intStr + "\"");
     }
 
-    public ITriggerAlgorithm getTriggerAlgorithm(int configId)
-        throws ConfigException
-    {
-        return getTriggerAlgorithm(configId, false);
-    }
-
-    public ITriggerAlgorithm getTriggerAlgorithm(int configId, boolean useOld)
-        throws ConfigException
-    {
-        for (AlgorithmData ad : algorithmData) {
-            if (ad.getConfigId() == configId) {
-                return ad.create(useOld);
-            }
-        }
-
-        return null;
-    }
-
     /**
      * Build a text string from all the text nodes in <tt>branch</tt>.
      *
@@ -409,6 +425,37 @@ public class Configuration
     public String getParent()
     {
         return file.getParent();
+    }
+
+    public ITriggerAlgorithm getTriggerAlgorithm(int configId)
+        throws ConfigException
+    {
+        return getTriggerAlgorithm(configId, false);
+    }
+
+    public ITriggerAlgorithm getTriggerAlgorithm(int configId, boolean useOld)
+        throws ConfigException
+    {
+        for (AlgorithmData ad : algorithmData) {
+            if (ad.getConfigId() == configId) {
+                return ad.create(useOld);
+            }
+        }
+
+        return null;
+    }
+
+    public ConfigData[] getConfigData()
+        throws ConfigException
+    {
+        ConfigData[] list = new ConfigData[algorithmData.size()];
+
+        int idx = 0;
+        for (AlgorithmData ad : algorithmData) {
+            list[idx++] = new ConfigData(ad);
+        }
+
+        return list;
     }
 
     public String getTriggerConfigName()

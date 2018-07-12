@@ -9,7 +9,24 @@ import sys
 import threading
 
 from lxml import etree
-from runner import JavaRunner
+
+def find_dash_directory():
+    """
+    Try to locate pDAQ's `dash` directory
+    Throw SystemExit if it cannot be found
+    """
+    if "PDAQ_HOME" in os.environ:
+        return os.path.join(os.environ["PDAQ_HOME"], "dash")
+
+    for path in ("../dash", "dash"):
+        if os.path.exists(path):
+            return path
+
+    raise SystemExit("Cannot find pDAQ's 'dash' directory")
+
+sys.path.append(find_dash_directory())
+
+from RunJava import JavaRunner
 
 
 ###
@@ -27,12 +44,7 @@ SUBPROJECT_PKGS = ("daq-common", "splicer", "payload", "daq-io", "juggler",
                    "trigger", "trigger-testbed")
 REPO_PKGS = (("log4j", "log4j", "1.2.7"),
              ("commons-logging", "commons-logging", "1.0.4"),
-             ("edu/wisc/icecube", "icebucket", "3.0.2"),
-             ("dom4j", "dom4j", "1.6.1"),
-             ("jaxen", "jaxen", "1.1.1"),
-             ("org/zeromq", "jzmq", "1.0.0"),
-             ("com/google/code/gson", "gson", "2.1"))
-
+             )
 
 class SkipList(object):
     "List of run configuration files to skip"
@@ -442,10 +454,8 @@ class TriggerRunner(JavaRunner):
         self.__fd = None
         self.__curcfg = None
 
-        super(TriggerRunner, self).__init__(main_class)
-
-        self.add_subproject_jars(SUBPROJECT_PKGS)
-        self.add_repo_jars(REPO_PKGS)
+        super(TriggerRunner, self).__init__(main_class, SUBPROJECT_PKGS,
+                                            REPO_PKGS)
 
     def __backup_output(self, comp, num_hits, rcname, suffix):
         if not os.path.exists(self.__wrapname):
@@ -492,7 +502,8 @@ class TriggerRunner(JavaRunner):
         self.__thread.start_run(self.__run_num)
 
         try:
-            return super(TriggerRunner, self).run(sys_args, java_args,
+            return super(TriggerRunner, self).run(java_args=java_args,
+                                                  sys_args=sys_args,
                                                   debug=debug)
         finally:
             self.__thread.stop_run()

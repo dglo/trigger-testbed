@@ -129,10 +129,20 @@ public abstract class WrappedComponent
 
         out.addDataChannel(sinkOut, outCache);
 
+        final int trigId;
+        if (algorithms == null || algorithms.size() == 0) {
+            throw new IOException("List of algorithms cannot be null or" +
+                                  " empty");
+        } else if (algorithms.size() == 1) {
+            trigId = algorithms.get(0).getTriggerConfigId();
+        } else {
+            trigId = -1;
+        }
+
         ConsumerHandler handler;
 
         final String name = HashedFileName.getName(runCfgName, getSourceID(),
-                                                   runNumber, numSrcs,
+                                                   runNumber, trigId, numSrcs,
                                                    numToSkip, numToProcess);
         File outFile = new File(targetDir, name);
         if (outFile.exists()) {

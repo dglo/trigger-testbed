@@ -37,31 +37,37 @@ class ManagerWrapper
         this.mgr = mgr;
     }
 
+    @Override
     public void addTrigger(ITriggerAlgorithm x0)
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public void addTriggers(Iterable<ITriggerAlgorithm> x0)
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public void flush()
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public AlertQueue getAlertQueue()
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public Iterable<AlgorithmStatistics> getAlgorithmStatistics()
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public IDOMRegistry getDOMRegistry()
     {
         try {
@@ -71,11 +77,7 @@ class ManagerWrapper
         }
     }
 
-    public int getNumInputsQueued()
-    {
-        throw new Error("Unimplemented");
-    }
-
+    @Override
     public int getNumOutputsQueued()
     {
         throw new Error("Unimplemented");
@@ -86,46 +88,60 @@ class ManagerWrapper
         throw new Error("Unimplemented");
     }
 
+    public Map<String, Integer> getQueuedInputs()
+    {
+        throw new Error("Unimplemented");
+    }
+
+    @Override
     public int getSourceId()
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public long getTotalProcessed()
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public boolean isStopped()
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public void setDOMRegistry(IDOMRegistry x0)
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public void setEarliestPayloadOfInterest(IPayload payload)
     {
         // ignored, since TriggerManager doesn't do anything with it
     }
 
+    @Override
     public void setOutputEngine(DAQComponentOutputProcess x0)
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public void setSplicer(Splicer x0)
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public void stopThread()
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public void switchToNewRun(int i0)
     {
         throw new Error("Unimplemented");
@@ -137,6 +153,8 @@ public class AlgorithmDeathmatch
 {
     private static final Logger LOG =
         Logger.getLogger(AlgorithmDeathmatch.class);
+
+    private Object runLock = new Object();
 
     private ITriggerAlgorithm newAlgorithm;
     private List<ITriggerRequestPayload> newReleased =
@@ -214,6 +232,7 @@ public class AlgorithmDeathmatch
         }
     }
 
+    @Override
     public int compareTo(ITriggerAlgorithm algorithm)
     {
         throw new Error("Unimplemented");
@@ -353,7 +372,7 @@ public class AlgorithmDeathmatch
         return oldVal;
     }
 
-    public IPayload getReleaseTime()
+    public long getReleaseTime()
     {
         return oldAlgorithm.getReleaseTime();
     }
@@ -448,6 +467,7 @@ public class AlgorithmDeathmatch
         return oldVal;
     }
 
+    @Override
     public Map<String, Object> getTriggerMonitorMap()
     {
         throw new Error("Unimplemented");
@@ -585,6 +605,7 @@ public class AlgorithmDeathmatch
         }
     }
 
+    @Override
     public int release(Interval interval,
                        List<ITriggerRequestPayload> released)
     {
@@ -626,8 +647,6 @@ public class AlgorithmDeathmatch
             }
         }
     }
-
-private Object runLock = new Object();
 
     public void runTrigger(IPayload payload)
         throws TriggerException

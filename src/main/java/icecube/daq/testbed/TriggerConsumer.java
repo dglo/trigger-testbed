@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class TriggerConsumer
     implements Consumer, ITriggerCollector, ITriggerManager
@@ -39,11 +40,13 @@ public class TriggerConsumer
         this.domRegistry = domRegistry;
     }
 
+    @Override
     public void addTrigger(ITriggerAlgorithm algorithm)
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public void addTriggers(Iterable<ITriggerAlgorithm> algorithms)
     {
         throw new Error("Unimplemented");
@@ -59,6 +62,7 @@ public class TriggerConsumer
         throw new Error("Unimplemented");
     }
 
+    @Override
     public void flush()
     {
         throw new Error("Unimplemented");
@@ -68,16 +72,19 @@ public class TriggerConsumer
      * Was the handler forced to stop?
      * @return <tt>true</tt> if handler was forced to stop
      */
+    @Override
     public boolean forcedStop()
     {
         return forcedStop;
     }
 
+    @Override
     public AlertQueue getAlertQueue()
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public Iterable<AlgorithmStatistics> getAlgorithmStatistics()
     {
         statsList.clear();
@@ -85,16 +92,18 @@ public class TriggerConsumer
         return statsList;
     }
 
+    @Override
     public IDOMRegistry getDOMRegistry()
     {
         return domRegistry;
     }
 
-    public int getNumInputsQueued()
+    public Map<String, Integer> getQueuedInputs()
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public int getNumOutputsQueued()
     {
         throw new Error("Unimplemented");
@@ -110,6 +119,7 @@ public class TriggerConsumer
      *
      * @return number of bad payloads
      */
+    @Override
     public int getNumberFailed()
     {
         return numFailed;
@@ -120,26 +130,31 @@ public class TriggerConsumer
      *
      * @return number of payloads
      */
+    @Override
     public int getNumberWritten()
     {
         return numWritten;
     }
 
+    @Override
     public int getSourceId()
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public long getTotalProcessed()
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public boolean isStopped()
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public boolean report(double clockSecs)
     {
         String success;
@@ -168,6 +183,7 @@ public class TriggerConsumer
         return (numMissed == 0 && numFailed == 0 && !forcedStop);
     }
 
+    @Override
     public void setChanged()
     {
         List<ITriggerRequestPayload> released = null;
@@ -191,11 +207,13 @@ public class TriggerConsumer
         }
     }
 
+    @Override
     public void setDOMRegistry(IDOMRegistry x0)
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public void setEarliestPayloadOfInterest(IPayload payload)
     {
         // do nothing
@@ -204,11 +222,13 @@ public class TriggerConsumer
     /**
      * Handler should forceably stop processing inputs.
      */
+    @Override
     public void setForcedStop()
     {
         forcedStop = true;
     }
 
+    @Override
     public void setOutputEngine(DAQComponentOutputProcess x0)
     {
         throw new Error("Unimplemented");
@@ -220,16 +240,19 @@ public class TriggerConsumer
      * @param splicer splicer
      * @deprecated
      */
+    @Override
     public void setSplicer(Splicer splicer)
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public void stopThread()
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public void switchToNewRun(int i0)
     {
         throw new Error("Unimplemented");

@@ -9,6 +9,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * A complex object which can be used to filter and sort hit file names.
@@ -16,10 +18,12 @@ import java.util.List;
 public class SimpleHitFilter
     implements Comparator, FilenameFilter
 {
+    private static final Pattern simplePat =
+        Pattern.compile("^(\\S*)hub(\\d+)_simplehits_(\\d+)_(\\d+)_(\\d+)" +
+                        "_(\\d+)\\.(\\S+)$");
+
     private int runNum;
     private String hubBase;
-    private String simpleBase;
-    private String oldBase;
 
     /**
      * Create a hit file filter.
@@ -43,15 +47,6 @@ public class SimpleHitFilter
     {
         this.runNum = runNum;
         this.hubBase = hubName;
-
-        final String simpleFront;
-        if (!hubName.startsWith("ichub")) {
-            simpleFront = hubName;
-        } else {
-            simpleFront = hubName.substring(2);
-        }
-
-        simpleBase = String.format("%s_simplehits_", simpleFront);
     }
 
     /**
@@ -61,25 +56,21 @@ public class SimpleHitFilter
      */
     public boolean accept(File dir, String name)
     {
-        if (!name.startsWith(hubBase) && !name.startsWith(simpleBase)) {
-            return false;
-        }
-
-        if (runNum > 0 && name.startsWith(simpleBase)) {
-            String tmpBase;
-            if (oldBase != null) {
-                tmpBase = oldBase;
-            } else {
-                tmpBase = String.format("%s%d", simpleBase, runNum);
-            }
-
-            if (name.startsWith(tmpBase)) {
-                oldBase = tmpBase;
+        if (name.indexOf("_simplehits_") > 0) {
+            if (name.startsWith(hubBase)) {
+                return true;
+            } else if (hubBase.startsWith("ic") &&
+                       name.startsWith(hubBase.substring(2)))
+            {
                 return true;
             }
         }
 
-        return true;
+        if (name.startsWith("i3live") && name.endsWith(hubBase)) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -89,10 +80,6 @@ public class SimpleHitFilter
      */
     public String basename()
     {
-        if (oldBase != null) {
-            return oldBase;
-        }
-
         return hubBase;
     }
 
@@ -132,29 +119,54 @@ public class SimpleHitFilter
 
     private int extractFileNumber(String name)
     {
+        final String hsBase = "HitSpool";
+
+        // find start of numeric string
         final int idx;
-        if (name.startsWith(oldBase)) {
-            idx = oldBase.length();
-        } else if (name.startsWith(simpleBase)) {
-            idx = simpleBase.length();
-        } else if (name.startsWith(hubBase)) {
+        if (name.startsWith(hubBase)) {
             idx = hubBase.length();
+        } else if (name.startsWith(hsBase)) {
+            idx = hsBase.length();
         } else {
-            throw new Error("Cannot extract file number from \"" + name +
-                            "\" (hub \"" + hubBase + "\" old \"" + oldBase +
-                            "\" simple \"" + simpleBase + "\"");
+            idx = -1;
         }
 
-        int end = name.indexOf("_", idx + 1);
-        String sub = name.substring(idx + 1, end);
+        String numStr;
+        if (idx > 0) {
+            // find end of numeric string
+            int end = name.indexOf("_", idx + 1);
+            if (end < 0) {
+                end = name.indexOf(".", idx + 1);
+                if (end < 0) {
+                    throw new Error("Cannot find end of file number in \"" +
+                                    name + "\" (hub \"" + hubBase +
+                                    "\" hs \"" + hsBase + "\")");
+                }
+            }
 
+            // extract numeric string
+            numStr = name.substring(idx + 1, end);
+        } else {
+            Matcher mtch = simplePat.matcher(name);
+            if (mtch.matches()) {
+                numStr = mtch.group(4);
+            } else {
+                numStr = null;
+            }
+        }
+
+        if (numStr == null) {
+            return NO_NUMBER;
+        }
+
+        // convert string to integer value
         try {
-            return Integer.parseInt(sub);
+            return Integer.parseInt(numStr);
         } catch (NumberFormatException nfe) {
-            throw new Error("Cannot parse file number \"" + sub +
+            throw new Error("Cannot parse file number \"" + numStr +
                             "\" from \"" + name +
-                            "\" (hub \"" + hubBase + "\" old \"" + oldBase +
-                            "\" simple \"" + simpleBase + "\"");
+                            "\" (hub \"" + hubBase +
+                            "\" hs \"" + hsBase + "\")");
         }
     }
 
@@ -199,7 +211,14 @@ public class SimpleHitFilter
     {
         SimpleHitFilter filter = new SimpleHitFilter(hubId, runNum);
 
-        File[] hitfiles = srcDir.listFiles(filter);
+        File runDir = new File(srcDir, String.format("run%06d", runNum));
+
+        File[] hitfiles;
+        if (runDir.exists()) {
+            hitfiles = runDir.listFiles(filter);
+        } else {
+            hitfiles = srcDir.listFiles(filter);
+        }
         if (hitfiles.length == 0) {
             String runStr;
             if (runNum <= 0) {

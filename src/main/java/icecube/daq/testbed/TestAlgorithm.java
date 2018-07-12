@@ -1,8 +1,11 @@
 package icecube.daq.testbed;
 
+import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.IPayload;
 import icecube.daq.payload.PayloadException;
+import icecube.daq.payload.impl.DOMHit;
 import icecube.daq.payload.impl.PayloadFactory;
+import icecube.daq.payload.impl.SimpleHit;
 import icecube.daq.payload.impl.TriggerRequestFactory;
 import icecube.daq.splicer.HKN1Splicer;
 import icecube.daq.splicer.SplicedAnalysis;
@@ -69,6 +72,7 @@ class PayloadFileToSplicerBridge
 {
     private StrandTail node;
     private PayloadFactory factory;
+    private IDOMRegistry registry;
 
     PayloadFileToSplicerBridge(String name, File[] files, StrandTail node)
     {
@@ -87,6 +91,11 @@ class PayloadFileToSplicerBridge
         node.close();
     }
 
+    void setDOMRegistry(IDOMRegistry registry)
+    {
+        this.registry = registry;
+    }
+
     public void write(ByteBuffer buf)
         throws IOException
     {
@@ -99,6 +108,38 @@ class PayloadFileToSplicerBridge
             } catch (PayloadException pe) {
                 throw new IOException("Cannot load payload", pe);
             }
+        }
+
+        // if this isn't a simple hit, try to convert it
+        if (payload.getPayloadType() != 1 &&
+            payload != TriggerManager.FLUSH_PAYLOAD)
+        {
+            IPayload simple = null;
+            PayloadException simpleEx = null;
+            if (payload instanceof DOMHit) {
+                DOMHit domHit = (DOMHit) payload;
+
+                IByteBufferCache cache = factory.getByteBufferCache();
+                try {
+                    ByteBuffer simpleBuf =
+                        domHit.getHitBuffer(cache, registry);
+                    simple = factory.getPayload(simpleBuf, 0);
+                } catch (PayloadException pe) {
+                    simpleEx = pe;
+                }
+            }
+
+            if (simple == null) {
+                String msg = "Cannot build simple hit from " + payload +
+                    " (type " + payload.getPayloadType() + ")";
+                if (simpleEx == null) {
+                    throw new IOException(msg);
+                } else {
+                    throw new IOException(msg, simpleEx);
+                }
+            }
+
+            payload = simple;
         }
 
         try {
@@ -116,9 +157,11 @@ class AlgorithmMonitor
     private AbstractPayloadFileListBridge[] bridges;
     private PayloadSubscriber subscriber;
 
-    private int[] bridgeCounts;
+    private long[] bridgeCounts;
     private long prevQueued;
     private long prevWritten;
+    private long prevCached;
+    private long prevSent;
 
     private ArrayList<AlgorithmStatistics> statsList =
         new ArrayList<AlgorithmStatistics>();
@@ -134,34 +177,45 @@ class AlgorithmMonitor
         this.bridges = bridges;
         this.subscriber = subscriber;
 
-        bridgeCounts = new int[bridges.length];
+        bridgeCounts = new long[bridges.length];
     }
 
     public boolean checkMonitoredObject()
     {
         boolean changed = false;
-        if (!changed) {
-            for (int i = 0; i < bridges.length; i++) {
-                if (bridges[i].getNumberWritten() > bridgeCounts[i]) {
-                    bridgeCounts[i] = bridges[i].getNumberWritten();
-                    changed = true;
-                    break;
-                }
-            }
-        }
+        long total = 0;
+        for (int i = 0; i < bridges.length; i++) {
+            final long value = bridges[i].getNumberWritten();
+            total += value;
 
-        if (!changed) {
-            if (prevQueued != subscriber.size()) {
-                prevQueued = subscriber.size();
+            if (value > bridgeCounts[i]) {
+                bridgeCounts[i] = value;
                 changed = true;
             }
         }
+        setNumberReceived(total);
 
-        if (!changed) {
-            if (prevWritten != algorithm.getTriggerCounter()) {
-                prevWritten = algorithm.getTriggerCounter();
-                changed = true;
-            }
+        if (prevQueued != subscriber.size()) {
+            prevQueued = subscriber.size();
+            setNumberOfQueuedInputs(prevQueued);
+            changed = true;
+        }
+
+        if (prevCached != algorithm.getNumberOfCachedRequests()) {
+            prevCached = algorithm.getNumberOfCachedRequests();
+            setNumberOfQueuedOutputs(prevCached);
+            changed = true;
+        }
+
+        if (prevWritten != algorithm.getTriggerCounter()) {
+            prevWritten = algorithm.getTriggerCounter();
+            changed = true;
+        }
+
+        if (prevSent != consumer.getNumberWritten()) {
+            prevSent = consumer.getNumberWritten();
+            setNumberSent(prevSent);
+            changed = true;
         }
 
         return changed;
@@ -457,10 +511,12 @@ public class TestAlgorithm
             final String hubName = SimpleHitFilter.getHubName(hubId);
 
             File[] files = SimpleHitFilter.listFiles(srcDir, hubId, runNumber);
+System.err.println(hubName + "*" + files.length);
 
             PayloadFileToSplicerBridge bridge =
                 new PayloadFileToSplicerBridge(hubName, files,
                                                splicer.beginStrand());
+            bridge.setDOMRegistry(registry);
             bridge.setNumberToSkip(numToSkip);
             bridge.setMaximumPayloads(numToProcess);
             bridge.setWriteDelay(1, 10);
@@ -477,9 +533,10 @@ public class TestAlgorithm
     {
         ConsumerHandler handler;
 
+        final int trigId = algorithm.getTriggerConfigId();
         final String name = HashedFileName.getName(runCfgName,
                                                    algorithm.getSourceId(),
-                                                   runNumber, numSrcs,
+                                                   runNumber, trigId, numSrcs,
                                                    numToSkip, numToProcess);
         File outFile = new File(targetDir, name);
         if (outFile.exists()) {
@@ -496,6 +553,26 @@ public class TestAlgorithm
         //consumer.start();
 
         return consumer;
+    }
+
+    private String[] listValidRunNumbers(File hitDir)
+    {
+        ArrayList<String> numbers = new ArrayList<String>();
+
+        for (String name : hitDir.list()) {
+            if (!name.startsWith("run")) {
+                continue;
+            }
+
+            File path = new File(hitDir, name);
+            if (!path.isDirectory()) {
+                continue;
+            }
+
+            numbers.add(name.substring(3));
+        }
+
+        return numbers.toArray(new String[0]);
     }
 
     /**
@@ -697,14 +774,27 @@ public class TestAlgorithm
                                    " \"-r runNumber\"");
                  usage = true;
             } else {
-                String tmpPath =
-                    String.format("prj/simplehits/run%05d", runNumber);
-                srcDir = new File(System.getenv("HOME"), tmpPath);
-                if (!srcDir.isDirectory()) {
-                    System.err.println("Cannot find default source " +
-                                       " directory " + srcDir);
-                    System.err.println("Please specify source directory (-s)");
+                File hitDir =
+                    new File(System.getenv("HOME"), "prj/simplehits");
+                if (!hitDir.isDirectory()) {
+                    System.err.println("Cannot find top-level SimpleHit" +
+                                       " directory " + hitDir);
                     usage = true;
+                } else {
+                    final String subName = String.format("run%05d", runNumber);
+                    srcDir = new File(hitDir, subName);
+                    if (!srcDir.isDirectory()) {
+                        System.err.println("Cannot find hit directory" +
+                                           " directory " + srcDir);
+                        String[] numbers = listValidRunNumbers(hitDir);
+                        if (numbers != null && numbers.length > 0) {
+                            System.err.println("Valid run numbers:");
+                            for (String number : numbers) {
+                                System.err.println("\t" + number);
+                            }
+                        }
+                        usage = true;
+                    }
                 }
             }
         }
@@ -759,6 +849,31 @@ public class TestAlgorithm
 
         if (configId == Integer.MIN_VALUE) {
             System.err.println("Please specify trigger config ID (-T)");
+
+            // try to fetch the list of trigger config IDs
+            ConfigData[] list;
+            if (runCfg == null) {
+                list = null;
+            } else {
+                try {
+                    list = runCfg.getConfigData();
+                } catch (ConfigException cex) {
+                    System.err.println("Cannot get configuration data");
+                    cex.printStackTrace();
+                    list = null;
+                }
+            }
+
+            // if we got a list of trigger config IDs, print it
+            if (list != null && list.length > 0) {
+                System.err.println("Valid config IDs:");
+                for (ConfigData cd : list) {
+                    System.err.println("\t" + cd.getConfigId() + " (" +
+                                       cd.getSourceName() + " " +
+                                       cd.getName() + ")");
+                }
+            }
+
             usage = true;
         } else if (!usage) {
             try {
@@ -826,6 +941,25 @@ public class TestAlgorithm
         }
     }
 
+    private static boolean report(TriggerThread thread,
+                                  AlgorithmMonitor activity,
+                                  TriggerConsumer consumer, double startSecs,
+                                  AlgorithmDeathmatch deathmatch)
+    {
+        final double now = ((double) System.nanoTime()) / 1000000000.0;
+
+        System.out.println(thread.toString());
+        for (AlgorithmStatistics stats : activity.getAlgorithmStatistics()) {
+            System.out.println(stats.toString());
+        }
+        boolean rtnval = consumer.report(now - startSecs);
+        if (deathmatch != null) {
+            System.out.println(deathmatch.getStats());
+        }
+
+        return rtnval;
+    }
+
     /**
      * Perform a DAQ run.
      *
@@ -837,6 +971,9 @@ public class TestAlgorithm
         // set log level
         Logger.getRootLogger().setLevel(logLevel);
         APPENDER.setLevel(logLevel);
+
+        // initialize SimpleHit DOM registry
+        SimpleHit.setDOMRegistry(registry);
 
         AlgorithmDeathmatch deathmatch = null;
         if (oldAlgorithm != null) {
@@ -880,13 +1017,21 @@ public class TestAlgorithm
         activity.waitForStasis(20, numToProcess, 2, verbose, dumpSplicer,
                                null);
 
+        algorithm.flush();
+
+        if (verbose) {
+            System.out.println("Waiting for final flush...");
+        }
+        activity.waitForStasis(20, numToProcess, 3, verbose, dumpSplicer,
+                               null);
+
         if (verbose) {
             System.out.println("Stopping...");
         }
         splicer.stop();
 
         if (verbose) {
-            System.out.println("Waiting for final flush...");
+            System.out.println("Waiting for splicer...");
         }
         activity.waitForStasis(20, numToProcess, 3, verbose, dumpSplicer,
                                null);
@@ -902,16 +1047,12 @@ public class TestAlgorithm
             bridge.stopThread();
         }
 
-        final double endTime = ((double) System.nanoTime()) / 1000000000.0;
-
         if (LOG.isInfoEnabled()) {
             LOG.info("Checking");
         }
 
-        boolean rtnval = consumer.report(endTime - startTime);
-        if (deathmatch != null) {
-            System.out.println(deathmatch.getStats());
-        }
+        boolean rtnval = report(thread, activity, consumer, startTime,
+                                deathmatch);
 
         //final boolean noOutput = consumer.getNumberWritten() == 0 &&
         //    consumer.getNumberFailed() == 0;

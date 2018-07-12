@@ -4,11 +4,13 @@ import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.splicer.Splicer;
 import icecube.daq.trigger.algorithm.AlgorithmStatistics;
 import icecube.daq.trigger.component.DAQTriggerComponent;
+import icecube.daq.trigger.control.ITriggerManager;
 
 import java.io.PrintStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
@@ -44,9 +46,9 @@ public class ComponentMonitor
                 changed = true;
             }
             if (getNumberOfQueuedInputs() !=
-                comp.getTriggerManager().getNumInputsQueued())
+                getNumInputsQueued(comp.getTriggerManager()))
             {
-                final long val = comp.getTriggerManager().getNumInputsQueued();
+                final long val = getNumInputsQueued(comp.getTriggerManager());
                 setNumberOfQueuedInputs(val);
                 changed = true;
             }
@@ -270,6 +272,18 @@ public class ComponentMonitor
     public String getMonitoredName()
     {
         return comp.toString();
+    }
+
+    private static long getNumInputsQueued(ITriggerManager mgr)
+    {
+        Map<String, Integer> map = mgr.getQueuedInputs();
+
+        long total = 0;
+        for (Integer val : map.values()) {
+            total += val;
+        }
+
+        return total;
     }
 
     /**
