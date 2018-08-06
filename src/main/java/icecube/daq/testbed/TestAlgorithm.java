@@ -31,41 +31,11 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-
-class PayloadComparator
-    implements Comparator<IPayload>
-{
-    public int compare(IPayload p1, IPayload p2)
-    {
-        if (p1 == null) {
-            if (p2 == null) {
-                return 0;
-            }
-
-            return 1;
-        } else if (p2 == null) {
-            return -1;
-        }
-
-        final long diff = p1.getUTCTime() - p2.getUTCTime();
-        if (diff < 0) {
-            return -1;
-        } else if (diff > 0) {
-            return 1;
-        } else {
-            return 0;
-        }
-    }
-
-    public boolean equals(Object obj)
-    {
-        return obj == this;
-    }
-}
 
 class PayloadFileToSplicerBridge
     extends AbstractPayloadFileListBridge
@@ -150,302 +120,6 @@ class PayloadFileToSplicerBridge
     }
 }
 
-class AlgorithmMonitor
-    extends ActivityMonitor
-{
-    private ITriggerAlgorithm algorithm;
-    private AbstractPayloadFileListBridge[] bridges;
-    private PayloadSubscriber subscriber;
-
-    private long[] bridgeCounts;
-    private long prevQueued;
-    private long prevWritten;
-    private long prevCached;
-    private long prevSent;
-
-    private ArrayList<AlgorithmStatistics> statsList =
-        new ArrayList<AlgorithmStatistics>();
-
-    AlgorithmMonitor(ITriggerAlgorithm algorithm,
-                     AbstractPayloadFileListBridge[] bridges,
-                     PayloadSubscriber subscriber, Consumer consumer,
-                     int maxFailures)
-    {
-        super(bridges, consumer, maxFailures);
-
-        this.algorithm = algorithm;
-        this.bridges = bridges;
-        this.subscriber = subscriber;
-
-        bridgeCounts = new long[bridges.length];
-    }
-
-    public boolean checkMonitoredObject()
-    {
-        boolean changed = false;
-        long total = 0;
-        for (int i = 0; i < bridges.length; i++) {
-            final long value = bridges[i].getNumberWritten();
-            total += value;
-
-            if (value > bridgeCounts[i]) {
-                bridgeCounts[i] = value;
-                changed = true;
-            }
-        }
-        setNumberReceived(total);
-
-        if (prevQueued != subscriber.size()) {
-            prevQueued = subscriber.size();
-            setNumberOfQueuedInputs(prevQueued);
-            changed = true;
-        }
-
-        if (prevCached != algorithm.getNumberOfCachedRequests()) {
-            prevCached = algorithm.getNumberOfCachedRequests();
-            setNumberOfQueuedOutputs(prevCached);
-            changed = true;
-        }
-
-        if (prevWritten != algorithm.getTriggerCounter()) {
-            prevWritten = algorithm.getTriggerCounter();
-            changed = true;
-        }
-
-        if (prevSent != consumer.getNumberWritten()) {
-            prevSent = consumer.getNumberWritten();
-            setNumberSent(prevSent);
-            changed = true;
-        }
-
-        return changed;
-    }
-
-    public void dumpMonitoring(PrintStream out, int rep)
-    {
-        throw new Error("Unimplemented");
-    }
-
-    public void forceStop()
-    {
-        throw new Error("Unimplemented");
-    }
-
-    public Iterable<AlgorithmStatistics> getAlgorithmStatistics()
-    {
-        statsList.clear();
-        statsList.add(new AlgorithmStatistics(algorithm));
-        return statsList;
-    }
-
-    public String getName()
-    {
-        return algorithm.getTriggerName();
-    }
-
-    public Splicer getSplicer()
-    {
-        throw new Error("Unimplemented");
-    }
-
-    public String getMonitoredName()
-    {
-        return getName();
-    }
-
-    public boolean isInputPaused()
-    {
-        return false;
-    }
-
-    public boolean isInputStopped()
-    {
-        for (AbstractPayloadFileListBridge bridge : bridges) {
-            if (bridge.isRunning()) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    public boolean isOutputStopped()
-    {
-        if (algorithm.getInputQueueSize() > 0) {
-            return false;
-        }
-
-        if (algorithm.getNumberOfCachedRequests() > 0) {
-            return false;
-        }
-
-        return true;
-    }
-
-    public void pauseInput()
-    {
-        System.err.println("Not pausing INPUT");
-    }
-
-    public void resumeInput()
-    {
-        System.err.println("Not resuming INPUT");
-    }
-}
-
-class SplicerSubscriber
-    implements PayloadSubscriber, SplicedAnalysis<IPayload>,
-               SplicerListener<IPayload>
-{
-    private static final Logger LOG =
-        Logger.getLogger(SplicerSubscriber.class);
-
-    private String name;
-    private ArrayList<IPayload> list = new ArrayList<IPayload>();
-    private boolean stopping;
-    private boolean stopped;
-
-    SplicerSubscriber(String name)
-    {
-        this.name = name;
-    }
-
-    public void analyze(List<IPayload> splicedObjects)
-    {
-        synchronized (list) {
-            list.addAll(splicedObjects);
-            list.notify();
-        }
-    }
-
-    public void disposed(SplicerChangedEvent<IPayload> event)
-    {
-        LOG.error("Got SplicerDisposed event: " + event);
-    }
-
-    public void failed(SplicerChangedEvent<IPayload> event)
-    {
-        LOG.error("Got SplicerFailed event: " + event);
-    }
-
-    /**
-     * Get subscriber name
-     *
-     * @return name
-     */
-    public String getName()
-    {
-        return name;
-    }
-
-    /**
-     * Is there data available?
-     *
-     * @return <tt>true</tt> if there are more payloads available
-     */
-    public boolean hasData()
-    {
-        return list.size() > 0;
-    }
-
-    /**
-     * Has this list been stopped?
-     *
-     * @return <tt>true</tt> if the list has been stopped
-     */
-    public boolean isStopped()
-    {
-        return stopped;
-    }
-
-    /**
-     * Return the next available payload.  Note that this may block if there
-     * are no payloads queued.
-     *
-     * @return next available payload.
-     */
-    public IPayload pop()
-    {
-        synchronized (list) {
-            while (!stopping && list.size() == 0) {
-                try {
-                    list.wait();
-                } catch (InterruptedException ie) {
-                    return null;
-                }
-            }
-
-            if (stopping && list.size() == 0) {
-                stopped = true;
-                return null;
-            }
-
-            return list.remove(0);
-        }
-    }
-
-    /**
-     * Add a payload to the queue.
-     *
-     * @param pay payload
-     */
-    public void push(IPayload pay)
-    {
-        throw new Error("New payloads should only be added by the splicer!");
-    }
-
-    /**
-     * Get the number of queued payloads
-     *
-     * @return size of internal queue
-     */
-    public int size()
-    {
-        return list.size();
-    }
-
-    public void started(SplicerChangedEvent<IPayload> event)
-    {
-        // ignored
-    }
-
-    public void starting(SplicerChangedEvent<IPayload> event)
-    {
-        // ignored
-    }
-
-    /**
-     * No more payloads will be collected
-     */
-    public void stop()
-    {
-        synchronized (list) {
-            if (!stopping && !stopped) {
-                stopping = true;
-                list.notify();
-            }
-        }
-    }
-
-    public void stopped(SplicerChangedEvent<IPayload> event)
-    {
-        LOG.error("SplicerStopped: subscriber list has " + list.size() +
-                  " entries");
-    }
-
-    public void stopping(SplicerChangedEvent<IPayload> event)
-    {
-        stopping = true;
-    }
-
-    public String toString()
-    {
-        final String sgstr = stopping ? ",stopping" : "";
-        final String sdstr = stopped ? ",stopped" : "";
-        return String.format("%s*%d%s%s", name, list.size(), sgstr, sdstr);
-    }
-}
-
 public class TestAlgorithm
 {
     private static final ColoredAppender APPENDER =
@@ -460,7 +134,6 @@ public class TestAlgorithm
     private ITriggerAlgorithm oldAlgorithm;
     private ITriggerAlgorithm algorithm;
     private boolean dumpSplicer;
-    private Level logLevel = DEFAULT_LOGLEVEL;
     private int numSrcs;
     private int numToProcess;
     private int numToSkip;
@@ -583,6 +256,7 @@ System.err.println(hubName + "*" + files.length);
     private void processArgs(String[] args)
     {
         int configId = Integer.MIN_VALUE;
+        Level logLevel = DEFAULT_LOGLEVEL;
         String runCfgName = null;
 
         boolean usage = false;
@@ -593,7 +267,7 @@ System.err.println(hubName + "*" + files.length);
                     i++;
                     runCfgName = args[i];
                     break;
-                case 'D':
+                case 'C':
                     i++;
                     File tmpCfgDir = new File(args[i]);
                     if (!tmpCfgDir.isDirectory()) {
@@ -613,6 +287,23 @@ System.err.println(hubName + "*" + files.length);
                         usage = true;
                     } else {
                         srcDir = tmpSource;
+                    }
+                    break;
+                case 'D':
+                    String propStr;
+                    if (args[i].length() > 2) {
+                        propStr = args[i].substring(2);
+                    } else {
+                        i++;
+                        propStr = args[i];
+                    }
+
+                    String[] tmpProp = propStr.split(Pattern.quote("="), 2);
+                    if (tmpProp == null || tmpProp.length != 2) {
+                        System.err.println("Bad property \"" + propStr + "\"");
+                        usage = true;
+                    } else {
+                        System.setProperty(tmpProp[0], tmpProp[1]);
                     }
                     break;
                 case 'F':
@@ -883,7 +574,11 @@ System.err.println(hubName + "*" + files.length);
                 usage = true;
             }
 
-            if (compareOld) {
+            if (algorithm == null) {
+                System.err.println("Cannot find trigger config #" + configId +
+                                   " in \"" + runCfgName + "\"");
+                usage = true;
+            } else if (compareOld) {
                 // look for an "OldXXX" version of class "XXX"
                 try {
                     oldAlgorithm = runCfg.getTriggerAlgorithm(configId, true);
@@ -892,6 +587,12 @@ System.err.println(hubName + "*" + files.length);
                     usage = true;
                 }
             }
+        }
+
+        if (!usage && algorithm == null) {
+            System.err.println("Please specify a valid trigger" +
+                               " configuration ID");
+                usage = true;
         }
 
         if (runCfg != null && algorithm != null) {
@@ -923,7 +624,7 @@ System.err.println(hubName + "*" + files.length);
         if (usage) {
             String usageMsg = "java " + getClass().getName() +
                 " [-c runConfig]" +
-                " [-D configDir]" +
+                " [-C configDir]" +
                 " [-d sourceDirectory]" +
                 " [-F maxNumberOfFailures]" +
                 " [-h numberOfSources]" +
@@ -939,6 +640,10 @@ System.err.println(hubName + "*" + files.length);
                 "";
             throw new IllegalArgumentException(usageMsg);
         }
+
+        // set log level
+        Logger.getRootLogger().setLevel(logLevel);
+        APPENDER.setLevel(logLevel);
     }
 
     private static boolean report(TriggerThread thread,
@@ -965,13 +670,9 @@ System.err.println(hubName + "*" + files.length);
      *
      * @return <tt>true</tt> if the run was successful
      */
-    public boolean run()
+    private boolean run()
         throws IOException
     {
-        // set log level
-        Logger.getRootLogger().setLevel(logLevel);
-        APPENDER.setLevel(logLevel);
-
         // initialize SimpleHit DOM registry
         SimpleHit.setDOMRegistry(registry);
 

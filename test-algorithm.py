@@ -4,6 +4,19 @@ import os
 import platform
 import sys
 
+# main class being run
+MAIN_CLASS = "icecube.daq.testbed.TestAlgorithm"
+
+# Java max memory
+JAVA_ARGS = "-Xmx4000m"
+
+# required jar files from subprojects and Maven repository
+SUBPROJECT_PKGS = ("daq-common", "splicer", "payload", "daq-io", "juggler",
+                   "trigger", "trigger-testbed")
+REPO_PKGS = (("log4j", "log4j", "1.2.12"),
+             ("commons-logging", "commons-logging", "1.0.4"),
+             )
+
 def find_dash_directory():
     """
     Try to locate pDAQ's `dash` directory
@@ -21,19 +34,6 @@ def find_dash_directory():
 sys.path.append(find_dash_directory())
 
 from RunJava import JavaRunner
-
-# main class being run
-MAIN_CLASS = "icecube.daq.testbed.TestAlgorithm"
-
-# Java max memory
-JAVA_ARGS = "-Xmx4000m"
-
-# required jar files from subprojects and Maven repository
-SUBPROJECT_PKGS = ("daq-common", "splicer", "payload", "daq-io", "juggler",
-                   "trigger", "trigger-testbed")
-REPO_PKGS = (("log4j", "log4j", "1.2.12"),
-             ("commons-logging", "commons-logging", "1.0.4"),
-             )
 
 if __name__ == "__main__":
     runner = JavaRunner(MAIN_CLASS, SUBPROJECT_PKGS, REPO_PKGS)

@@ -68,6 +68,10 @@ class TriggerReadout
 class AlgorithmData
     extends ObjectCreator
 {
+    // package name for trigger algorithms
+    private static final String ALGORITHM_PACKAGE =
+        "icecube.daq.trigger.algorithm";
+
     private String name;
     private int type;
     private int cfgId;
@@ -95,11 +99,42 @@ class AlgorithmData
         readouts.add(new TriggerReadout(type, offset, minus, plus));
     }
 
+    /**
+     * Build a trigger algorithm class name
+     *
+     * @param prefix string to add before the class name (like "Old" or "XXX")
+     * @param name class name
+     * @param suffix string to add after the class name (like "_r12345")
+     *
+     * @returns class name as a string
+     */
+    private static String buildClassName(String prefix, String name,
+                                         String suffix)
+    {
+        if (prefix == null) {
+            prefix = "";
+        }
+
+        if (suffix == null) {
+            suffix = "";
+        }
+
+        return ALGORITHM_PACKAGE + "." + prefix + name + suffix;
+    }
+
+    /**
+     * Create a trigger algorithm object.
+     *
+     * @param useOld if <tt>true</tt>, build the 'old' version (the old
+     *               version of "FooTrigger" should be named "OldFooTrigger")
+     *
+     * @returns algorithm object
+     *
+     * @throws ConfigException if the object cannot be created
+     */
     public ITriggerAlgorithm create(boolean useOld)
         throws ConfigException
     {
-        final String packageName = "icecube.daq.trigger.algorithm.";
-
         String prefix;
         if (useOld) {
             prefix = "Old";
@@ -107,9 +142,45 @@ class AlgorithmData
             prefix = "";
         }
 
-        Class classObj = null;
+        return create(buildClassName(prefix, name, ""));
+    }
 
-        String className = packageName + prefix + name;
+    /**
+     * Create a trigger algorithm object.
+     *
+     * @param revision if not less than 0, create a revisioned object
+     *                 (e.g. "FooTrigger_r1234" for "FooTrigger" revision 1234)
+     *
+     * @returns algorithm object
+     *
+     * @throws ConfigException if the object cannot be created
+     */
+    public ITriggerAlgorithm create(int revision)
+        throws ConfigException
+    {
+        String suffix;
+        if (revision <= 0) {
+            suffix = "";
+        } else {
+            suffix = "_r" + revision;
+        }
+
+        return create(buildClassName("", name, suffix));
+    }
+
+    /**
+     * Create a trigger algorithm object.
+     *
+     * @param className name of the algorithm class
+     *
+     * @returns algorithm object
+     *
+     * @throws ConfigException if the object cannot be created
+     */
+    private ITriggerAlgorithm create(String className)
+        throws ConfigException
+    {
+        Class classObj = null;
         try {
             classObj = Class.forName(className);
         } catch (ClassNotFoundException cnfe) {
@@ -439,6 +510,18 @@ public class Configuration
         for (AlgorithmData ad : algorithmData) {
             if (ad.getConfigId() == configId) {
                 return ad.create(useOld);
+            }
+        }
+
+        return null;
+    }
+
+    public ITriggerAlgorithm getTriggerAlgorithm(int configId, int rev)
+        throws ConfigException
+    {
+        for (AlgorithmData ad : algorithmData) {
+            if (ad.getConfigId() == configId) {
+                return ad.create(rev);
             }
         }
 

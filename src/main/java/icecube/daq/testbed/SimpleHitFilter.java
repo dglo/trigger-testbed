@@ -219,6 +219,7 @@ public class SimpleHitFilter
         } else {
             hitfiles = srcDir.listFiles(filter);
         }
+
         if (hitfiles.length == 0) {
             String runStr;
             if (runNum <= 0) {

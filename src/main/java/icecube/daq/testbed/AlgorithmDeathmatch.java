@@ -364,7 +364,8 @@ public class AlgorithmDeathmatch
             }
         }
 
-        if (newVal != oldVal) {
+        final int diff = Math.abs(newVal - oldVal);
+        if (diff != 0 && diff != 1) {
             System.err.println("MISMATCH in getNumberOfCachedRequests:" +
                                " old " + oldVal + ", new " + newVal);
         }
@@ -401,7 +402,8 @@ public class AlgorithmDeathmatch
             }
         }
 
-        if (newVal != oldVal) {
+        final long diff = Math.abs(newVal - oldVal);
+        if (diff != 0L && diff != 1L) {
             System.err.println("MISMATCH in getSentTriggerCount:" +
                                " old " + oldVal + ", new " + newVal);
         }
@@ -459,7 +461,8 @@ public class AlgorithmDeathmatch
             }
         }
 
-        if (newVal != oldVal) {
+        final int diff = Math.abs(newVal - oldVal);
+        if (diff != 0 && diff != 1) {
             System.err.println("MISMATCH in getTriggerCounter:" +
                                " old " + oldVal + ", new " + newVal);
         }
