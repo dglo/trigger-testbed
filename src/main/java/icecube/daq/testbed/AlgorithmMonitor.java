@@ -96,6 +96,11 @@ class AlgorithmMonitor
         return statsList;
     }
 
+    public String getMonitoredName()
+    {
+        return getName();
+    }
+
     public String getName()
     {
         return algorithm.getTriggerName();
@@ -104,11 +109,6 @@ class AlgorithmMonitor
     public Splicer getSplicer()
     {
         throw new Error("Unimplemented");
-    }
-
-    public String getMonitoredName()
-    {
-        return getName();
     }
 
     public boolean isInputPaused()

@@ -115,6 +115,20 @@ public class SimpleHitFilter
         return n1 - n2;
     }
 
+    /**
+     * Do the objects implement the same class?
+     *
+     * @return <tt>true</tt> if they are the same class
+     */
+    public boolean equals(Object obj)
+    {
+        if (obj == null) {
+            return false;
+        }
+
+        return obj.getClass().getName().equals(getClass().getName());
+    }
+
     private static final int NO_NUMBER = Integer.MIN_VALUE;
 
     private int extractFileNumber(String name)
@@ -168,20 +182,6 @@ public class SimpleHitFilter
                             "\" (hub \"" + hubBase +
                             "\" hs \"" + hsBase + "\")");
         }
-    }
-
-    /**
-     * Do the objects implement the same class?
-     *
-     * @return <tt>true</tt> if they are the same class
-     */
-    public boolean equals(Object obj)
-    {
-        if (obj == null) {
-            return false;
-        }
-
-        return obj.getClass().getName().equals(getClass().getName());
     }
 
     /*

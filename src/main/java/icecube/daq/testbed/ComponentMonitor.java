@@ -286,6 +286,11 @@ public class ComponentMonitor
         return total;
     }
 
+    public String getName()
+    {
+        return prefix;
+    }
+
     /**
      * Get the component's splicer.
      *
@@ -294,11 +299,6 @@ public class ComponentMonitor
     public Splicer getSplicer()
     {
         return comp.getSplicer();
-    }
-
-    public String getName()
-    {
-        return prefix;
     }
 
     public boolean isInputPaused()
