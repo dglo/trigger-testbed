@@ -98,6 +98,7 @@ public class TriggerConsumer
         return domRegistry;
     }
 
+    @Override
     public Map<String, Integer> getQueuedInputs()
     {
         throw new Error("Unimplemented");

@@ -58,6 +58,7 @@ class TriggerReadout
         return type;
     }
 
+    @Override
     public String toString()
     {
         return String.format("TriggerReadout[#%d: %d -%d +%d]", type, offset,
@@ -252,6 +253,7 @@ class AlgorithmData
         return type;
     }
 
+    @Override
     public String toString()
     {
         return String.format("%s[#%d cfg %d src %d]", name, type, cfgId,
@@ -829,6 +831,7 @@ public class Configuration
         TriggerRequest.setTypeNames(typeNames);
     }
 
+    @Override
     public String toString()
     {
         return file.getName() + "[" + trigCfgName + "::hubs*" +

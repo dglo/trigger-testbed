@@ -9,15 +9,18 @@ import java.util.Map;
 public class MockAlerter
     implements Alerter
 {
+    @Override
     public void close()
     {
     }
 
+    @Override
     public String getService()
     {
         return DEFAULT_SERVICE;
     }
 
+    @Override
     public boolean isActive()
     {
         return true;
@@ -60,6 +63,7 @@ public class MockAlerter
     {
     }
 
+    @Override
     public void sendObject(Object x0)
         throws AlertException
     {

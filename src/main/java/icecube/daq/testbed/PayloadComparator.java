@@ -7,6 +7,7 @@ import java.util.Comparator;
 class PayloadComparator
     implements Comparator<IPayload>
 {
+    @Override
     public int compare(IPayload p1, IPayload p2)
     {
         if (p1 == null) {
@@ -29,6 +30,7 @@ class PayloadComparator
         }
     }
 
+    @Override
     public boolean equals(Object obj)
     {
         return obj == this;

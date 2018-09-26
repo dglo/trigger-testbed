@@ -28,6 +28,7 @@ class SplicerSubscriber
         this.name = name;
     }
 
+    @Override
     public void analyze(List<IPayload> splicedObjects)
     {
         synchronized (list) {
@@ -36,11 +37,13 @@ class SplicerSubscriber
         }
     }
 
+    @Override
     public void disposed(SplicerChangedEvent<IPayload> event)
     {
         LOG.error("Got SplicerDisposed event: " + event);
     }
 
+    @Override
     public void failed(SplicerChangedEvent<IPayload> event)
     {
         LOG.error("Got SplicerFailed event: " + event);
@@ -51,6 +54,7 @@ class SplicerSubscriber
      *
      * @return name
      */
+    @Override
     public String getName()
     {
         return name;
@@ -61,6 +65,7 @@ class SplicerSubscriber
      *
      * @return <tt>true</tt> if there are more payloads available
      */
+    @Override
     public boolean hasData()
     {
         return list.size() > 0;
@@ -71,6 +76,7 @@ class SplicerSubscriber
      *
      * @return <tt>true</tt> if the list has been stopped
      */
+    @Override
     public boolean isStopped()
     {
         return stopped;
@@ -82,6 +88,7 @@ class SplicerSubscriber
      *
      * @return next available payload.
      */
+    @Override
     public IPayload pop()
     {
         synchronized (list) {
@@ -107,6 +114,7 @@ class SplicerSubscriber
      *
      * @param pay payload
      */
+    @Override
     public void push(IPayload pay)
     {
         throw new Error("New payloads should only be added by the splicer!");
@@ -117,16 +125,19 @@ class SplicerSubscriber
      *
      * @return size of internal queue
      */
+    @Override
     public int size()
     {
         return list.size();
     }
 
+    @Override
     public void started(SplicerChangedEvent<IPayload> event)
     {
         // ignored
     }
 
+    @Override
     public void starting(SplicerChangedEvent<IPayload> event)
     {
         // ignored
@@ -135,6 +146,7 @@ class SplicerSubscriber
     /**
      * No more payloads will be collected
      */
+    @Override
     public void stop()
     {
         synchronized (list) {
@@ -145,17 +157,20 @@ class SplicerSubscriber
         }
     }
 
+    @Override
     public void stopped(SplicerChangedEvent<IPayload> event)
     {
         LOG.error("SplicerStopped: subscriber list has " + list.size() +
                   " entries");
     }
 
+    @Override
     public void stopping(SplicerChangedEvent<IPayload> event)
     {
         stopping = true;
     }
 
+    @Override
     public String toString()
     {
         final String sgstr = stopping ? ",stopping" : "";

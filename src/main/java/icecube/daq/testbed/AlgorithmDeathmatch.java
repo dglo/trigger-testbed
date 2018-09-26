@@ -88,6 +88,7 @@ class ManagerWrapper
         throw new Error("Unimplemented");
     }
 
+    @Override
     public Map<String, Integer> getQueuedInputs()
     {
         throw new Error("Unimplemented");
@@ -195,6 +196,7 @@ public class AlgorithmDeathmatch
         return (index == 0 ? newTimer : oldTimer);
     }
 
+    @Override
     public void addParameter(String name, String value)
         throws UnknownParameterException, IllegalParameterValueException
     {
@@ -214,6 +216,7 @@ public class AlgorithmDeathmatch
         }
     }
 
+    @Override
     public void addReadout(int rdoutType, int offset, int minus, int plus)
     {
         final int pos = 1;
@@ -238,6 +241,7 @@ public class AlgorithmDeathmatch
         throw new Error("Unimplemented");
     }
 
+    @Override
     public void flush()
     {
         final int pos = 2;
@@ -256,6 +260,7 @@ public class AlgorithmDeathmatch
         }
     }
 
+    @Override
     public IPayload getEarliestPayloadOfInterest()
     {
         final int pos = 3;
@@ -289,6 +294,7 @@ public class AlgorithmDeathmatch
         return oldPay;
     }
 
+    @Override
     public int getInputQueueSize()
     {
         if (subscriber == null) {
@@ -298,6 +304,7 @@ public class AlgorithmDeathmatch
         return subscriber.size();
     }
 
+    @Override
     public Interval getInterval(Interval interval)
     {
         final int pos = 5;
@@ -335,11 +342,13 @@ public class AlgorithmDeathmatch
         return oldIval;
     }
 
+    @Override
     public String getMonitoringName()
     {
         return oldAlgorithm.getMonitoringName();
     }
 
+    @Override
     public int getNumberOfCachedRequests()
     {
         final int pos = 7;
@@ -373,11 +382,13 @@ public class AlgorithmDeathmatch
         return oldVal;
     }
 
+    @Override
     public long getReleaseTime()
     {
         return oldAlgorithm.getReleaseTime();
     }
 
+    @Override
     public long getSentTriggerCount()
     {
         final int pos = 9;
@@ -411,6 +422,7 @@ public class AlgorithmDeathmatch
         return oldVal;
     }
 
+    @Override
     public int getSourceId()
     {
         return oldAlgorithm.getSourceId();
@@ -427,16 +439,19 @@ public class AlgorithmDeathmatch
                           (oldTotal / newTotal) * 100.0);
     }
 
+    @Override
     public PayloadSubscriber getSubscriber()
     {
         return subscriber;
     }
 
+    @Override
     public int getTriggerConfigId()
     {
         return oldAlgorithm.getTriggerConfigId();
     }
 
+    @Override
     public int getTriggerCounter()
     {
         final int pos = 13;
@@ -476,16 +491,19 @@ public class AlgorithmDeathmatch
         throw new Error("Unimplemented");
     }
 
+    @Override
     public String getTriggerName()
     {
         return oldAlgorithm.getTriggerName();
     }
 
+    @Override
     public int getTriggerType()
     {
         return oldAlgorithm.getTriggerType();
     }
 
+    @Override
     public boolean hasCachedRequests()
     {
         final int pos = 16;
@@ -518,6 +536,7 @@ public class AlgorithmDeathmatch
         return oldVal;
     }
 
+    @Override
     public boolean hasData()
     {
         if (subscriber == null) {
@@ -527,6 +546,7 @@ public class AlgorithmDeathmatch
         return subscriber.hasData();
     }
 
+    @Override
     public boolean hasValidMultiplicity()
     {
         final int pos = 18;
@@ -559,6 +579,7 @@ public class AlgorithmDeathmatch
         return oldVal;
     }
 
+    @Override
     public boolean isConfigured()
     {
         final int pos = 19;
@@ -591,6 +612,7 @@ public class AlgorithmDeathmatch
         return oldVal;
     }
 
+    @Override
     public void recycleUnusedRequests()
     {
         final int pos = 20;
@@ -615,6 +637,7 @@ public class AlgorithmDeathmatch
         throw new Error("Unimplemented");
     }
 
+    @Override
     public void resetAlgorithm()
     {
         final int pos = 22;
@@ -633,6 +656,7 @@ public class AlgorithmDeathmatch
         }
     }
 
+    @Override
     public void resetUID()
     {
         final int pos = 23;
@@ -651,6 +675,7 @@ public class AlgorithmDeathmatch
         }
     }
 
+    @Override
     public void runTrigger(IPayload payload)
         throws TriggerException
     {
@@ -672,6 +697,7 @@ public class AlgorithmDeathmatch
         }
     }
 
+    @Override
     public void sendLast()
     {
         final int pos = 40;
@@ -707,6 +733,7 @@ public class AlgorithmDeathmatch
         }
     }
 
+    @Override
     public void setChanged()
     {
         final int pos = 42;
@@ -742,6 +769,7 @@ public class AlgorithmDeathmatch
         }
     }
 
+    @Override
     public void setSourceId(int srcId)
     {
         final int pos = 43;
@@ -760,6 +788,7 @@ public class AlgorithmDeathmatch
         }
     }
 
+    @Override
     public void setSubscriber(PayloadSubscriber subscriber)
     {
         if (this.subscriber != null) {
@@ -770,12 +799,14 @@ public class AlgorithmDeathmatch
         this.subscriber = subscriber;
     }
 
+    @Override
     public void setTriggerCollector(ITriggerCollector collector)
     {
         oldAlgorithm.setTriggerCollector(this);
         newAlgorithm.setTriggerCollector(this);
     }
 
+    @Override
     public void setTriggerConfigId(int cfgId)
     {
         final int pos = 46;
@@ -794,6 +825,7 @@ public class AlgorithmDeathmatch
         }
     }
 
+    @Override
     public void setTriggerFactory(TriggerRequestFactory factory)
     {
         final int pos = 47;
@@ -812,6 +844,7 @@ public class AlgorithmDeathmatch
         }
     }
 
+    @Override
     public void setTriggerManager(ITriggerManager mgr)
     {
         ManagerWrapper mock = new ManagerWrapper(mgr);
@@ -819,6 +852,7 @@ public class AlgorithmDeathmatch
         newAlgorithm.setTriggerManager(mock);
     }
 
+    @Override
     public void setTriggerName(String name)
     {
         final int pos = 49;
@@ -837,6 +871,7 @@ public class AlgorithmDeathmatch
         }
     }
 
+    @Override
     public void setTriggerType(int trigType)
     {
         final int pos = 98;
@@ -855,6 +890,7 @@ public class AlgorithmDeathmatch
         }
     }
 
+    @Override
     public void unsubscribe(SubscribedList list)
     {
         if (subscriber == null) {
@@ -871,6 +907,7 @@ public class AlgorithmDeathmatch
         subscriber = null;
     }
 
+    @Override
     public String toString()
     {
         return "Deathmatch[" + oldAlgorithm + " <=> " + newAlgorithm + "]";

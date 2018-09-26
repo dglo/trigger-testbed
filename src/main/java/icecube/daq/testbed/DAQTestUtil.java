@@ -56,6 +56,7 @@ class ChannelData
      *
      * @return debugging string
      */
+    @Override
     public String toString()
     {
         StringBuilder buf = new StringBuilder("Channel[");

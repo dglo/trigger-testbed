@@ -34,17 +34,20 @@ public class OutputHandler
         outChan = openFile(outFile);
     }
 
+    @Override
     public void close()
         throws IOException
     {
         outChan.close();
     }
 
+    @Override
     public void configure(ITriggerAlgorithm algorithm)
     {
         // nothing to do
     }
 
+    @Override
     public void configure(Iterable<ITriggerAlgorithm> algorithms)
     {
         // nothing to do
@@ -54,6 +57,7 @@ public class OutputHandler
      * Get number of payloads which were unexpected.
      * @return number of extra payloads
      */
+    @Override
     public int getNumberExtra()
     {
         return 0;
@@ -63,16 +67,19 @@ public class OutputHandler
      * Get the number of leftover payloads which were not seen.
      * @return number of missed payloads
      */
+    @Override
     public int getNumberMissed()
     {
         return 0;
     }
 
+    @Override
     public String getReportVerb()
     {
         return "wrote";
     }
 
+    @Override
     public void handle(ByteBuffer buf)
         throws IOException
     {
@@ -99,6 +106,7 @@ public class OutputHandler
         return out.getChannel();
     }
 
+    @Override
     public void reportTime(double clockSecs)
     {
         if (firstTime != Long.MIN_VALUE && lastTime != Long.MIN_VALUE) {
@@ -113,6 +121,7 @@ public class OutputHandler
         }
     }
 
+    @Override
     public boolean sawStop()
     {
         return sawStop;

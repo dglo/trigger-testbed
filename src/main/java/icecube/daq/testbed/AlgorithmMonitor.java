@@ -38,6 +38,7 @@ class AlgorithmMonitor
         bridgeCounts = new long[bridges.length];
     }
 
+    @Override
     public boolean checkMonitoredObject()
     {
         boolean changed = false;
@@ -84,11 +85,13 @@ class AlgorithmMonitor
         throw new Error("Unimplemented");
     }
 
+    @Override
     public void forceStop()
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public Iterable<AlgorithmStatistics> getAlgorithmStatistics()
     {
         statsList.clear();
@@ -96,26 +99,31 @@ class AlgorithmMonitor
         return statsList;
     }
 
+    @Override
     public String getMonitoredName()
     {
         return getName();
     }
 
+    @Override
     public String getName()
     {
         return algorithm.getTriggerName();
     }
 
+    @Override
     public Splicer getSplicer()
     {
         throw new Error("Unimplemented");
     }
 
+    @Override
     public boolean isInputPaused()
     {
         return false;
     }
 
+    @Override
     public boolean isInputStopped()
     {
         for (AbstractPayloadFileListBridge bridge : bridges) {
@@ -127,6 +135,7 @@ class AlgorithmMonitor
         return true;
     }
 
+    @Override
     public boolean isOutputStopped()
     {
         if (algorithm.getInputQueueSize() > 0) {
@@ -140,11 +149,13 @@ class AlgorithmMonitor
         return true;
     }
 
+    @Override
     public void pauseInput()
     {
         System.err.println("Not pausing INPUT");
     }
 
+    @Override
     public void resumeInput()
     {
         System.err.println("Not resuming INPUT");

@@ -56,6 +56,7 @@ class PayloadFileToSplicerBridge
     /**
      * Close the output channel.
      */
+    @Override
     void finishThreadCleanup()
     {
         node.close();
@@ -66,6 +67,7 @@ class PayloadFileToSplicerBridge
         this.registry = registry;
     }
 
+    @Override
     public void write(ByteBuffer buf)
         throws IOException
     {

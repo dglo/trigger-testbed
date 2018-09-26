@@ -91,6 +91,7 @@ public class SimpleHitFilter
      *
      * @return the usual comparison values
      */
+    @Override
     public int compare(Object o1, Object o2)
     {
         if (!(o1 instanceof File) || !(o2 instanceof File)) {
@@ -120,6 +121,7 @@ public class SimpleHitFilter
      *
      * @return <tt>true</tt> if they are the same class
      */
+    @Override
     public boolean equals(Object obj)
     {
         if (obj == null) {

@@ -24,6 +24,7 @@ import org.apache.log4j.Logger;
 class MockCollector
     implements ITriggerCollector
 {
+    @Override
     public void setChanged()
     {
         // do nothing

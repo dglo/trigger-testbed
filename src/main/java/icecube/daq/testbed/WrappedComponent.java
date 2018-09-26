@@ -512,6 +512,7 @@ public abstract class WrappedComponent
         }
     }
 
+    @Override
     public String toString()
     {
         return comp.toString();

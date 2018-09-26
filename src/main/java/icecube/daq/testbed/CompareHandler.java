@@ -50,6 +50,7 @@ public class CompareHandler
         rdr = new PayloadByteReader(payloadFile);
     }
 
+    @Override
     public void close()
         throws IOException
     {
@@ -73,6 +74,7 @@ public class CompareHandler
         return comparePayloads(out, exp, got);
     }
 
+    @Override
     public void configure(ITriggerAlgorithm algorithm)
     {
         if (algorithm.getMonitoringName().equals("THROUGHPUT")) {
@@ -80,6 +82,7 @@ public class CompareHandler
         }
     }
 
+    @Override
     public void configure(Iterable<ITriggerAlgorithm> algorithms)
     {
         for (ITriggerAlgorithm algo : algorithms) {
@@ -91,6 +94,7 @@ public class CompareHandler
      * Get number of payloads which were unexpected.
      * @return number of extra payloads
      */
+    @Override
     public int getNumberExtra()
     {
         return numExtra;
@@ -100,11 +104,13 @@ public class CompareHandler
      * Get the number of leftover payloads which were not seen.
      * @return number of missed payloads
      */
+    @Override
     public int getNumberMissed()
     {
         return numMissed;
     }
 
+    @Override
     public String getReportVerb()
     {
         return "compared";
@@ -135,6 +141,7 @@ public class CompareHandler
         return pay;
     }
 
+    @Override
     public void handle(ByteBuffer buf)
         throws IOException
     {
@@ -173,6 +180,7 @@ public class CompareHandler
         }
     }
 
+    @Override
     public void reportTime(double clockSecs)
     {
         if (firstTime != Long.MIN_VALUE && lastTime != Long.MIN_VALUE) {
@@ -187,6 +195,7 @@ public class CompareHandler
         }
     }
 
+    @Override
     public boolean sawStop()
     {
         return sawStop;

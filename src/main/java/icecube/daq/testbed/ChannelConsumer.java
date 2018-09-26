@@ -61,6 +61,7 @@ public class ChannelConsumer
      * Was the handler forced to stop?
      * @return <tt>true</tt> if handler was forced to stop
      */
+    @Override
     public boolean forcedStop()
     {
         return forcedStop;
@@ -81,6 +82,7 @@ public class ChannelConsumer
      *
      * @return number of bad payloads
      */
+    @Override
     public int getNumberFailed()
     {
         return numFailed;
@@ -91,6 +93,7 @@ public class ChannelConsumer
      *
      * @return number of payloads
      */
+    @Override
     public int getNumberWritten()
     {
         return numWritten;
@@ -113,6 +116,7 @@ public class ChannelConsumer
      *
      * @return <tt>true</tt> if all payloads were found
      */
+    @Override
     public boolean report(double clockSecs)
     {
         String success;
@@ -144,6 +148,7 @@ public class ChannelConsumer
     /**
      * Run the consumer thread.
      */
+    @Override
     public void run()
     {
         ByteBuffer lenBuf = ByteBuffer.allocate(4);
@@ -210,6 +215,7 @@ public class ChannelConsumer
     /**
      * Handler should forceably stop processing inputs.
      */
+    @Override
     public void setForcedStop()
     {
         forcedStop = true;
@@ -232,6 +238,7 @@ public class ChannelConsumer
      *
      * @return debugging string
      */
+    @Override
     public String toString()
     {
         return inputName + "#" + numWritten + (isRunning() ? "" : "(stopped)");

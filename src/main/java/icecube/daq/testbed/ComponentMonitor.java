@@ -37,6 +37,7 @@ public class ComponentMonitor
         this.prefix = prefix;
     }
 
+    @Override
     public boolean checkMonitoredObject()
     {
         boolean changed = false;
@@ -178,6 +179,7 @@ public class ComponentMonitor
     /**
      * Force component to stop.
      */
+    @Override
     public void forceStop()
     {
         try {
@@ -192,6 +194,7 @@ public class ComponentMonitor
      *
      * @return trigger counts string
      */
+    @Override
     public Iterable<AlgorithmStatistics> getAlgorithmStatistics()
     {
         return comp.getTriggerManager().getAlgorithmStatistics();
@@ -269,6 +272,7 @@ public class ComponentMonitor
         }
     }
 
+    @Override
     public String getMonitoredName()
     {
         return comp.toString();
@@ -286,6 +290,7 @@ public class ComponentMonitor
         return total;
     }
 
+    @Override
     public String getName()
     {
         return prefix;
@@ -296,31 +301,37 @@ public class ComponentMonitor
      *
      * @return splicer
      */
+    @Override
     public Splicer getSplicer()
     {
         return comp.getSplicer();
     }
 
+    @Override
     public boolean isInputPaused()
     {
         return comp.getReader().isPaused();
     }
 
+    @Override
     public boolean isInputStopped()
     {
         return comp == null || !comp.getReader().isRunning();
     }
 
+    @Override
     public boolean isOutputStopped()
     {
         return comp == null || comp.getWriter().isStopped();
     }
 
+    @Override
     public void pauseInput()
     {
         comp.getReader().pause();
     }
 
+    @Override
     public void resumeInput()
     {
         comp.getReader().unpause();
