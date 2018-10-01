@@ -1,7 +1,7 @@
 package icecube.daq.testbed;
 
 import icecube.daq.io.DAQComponentIOProcess;
-import icecube.daq.io.PayloadReader;
+import icecube.daq.io.DAQStreamReader;
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.splicer.Splicer;
 
@@ -180,7 +180,7 @@ public abstract class DAQTestUtil
      *
      * @throws IOException if there is a problem
      */
-    public static Pipe[] connectToReader(PayloadReader rdr,
+    public static Pipe[] connectToReader(DAQStreamReader rdr,
                                          IByteBufferCache cache,
                                          int numTails)
         throws IOException
@@ -204,7 +204,7 @@ public abstract class DAQTestUtil
      *
      * @throws IOException if there is a problem
      */
-    public static Pipe connectToReader(PayloadReader rdr,
+    public static Pipe connectToReader(DAQStreamReader rdr,
                                        IByteBufferCache cache)
         throws IOException
     {
@@ -230,7 +230,7 @@ public abstract class DAQTestUtil
      * @param splicer splicer
      * @param rdrName payload reader name
      */
-    public static void initReader(PayloadReader rdr, Splicer splicer,
+    public static void initReader(DAQStreamReader rdr, Splicer splicer,
                                    String rdrName)
     {
         rdr.start();
