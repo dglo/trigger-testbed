@@ -278,7 +278,7 @@ class TriggerConfig(object):
         prefix = ("ii", "it", "gl", "??")
 
         tstr = None
-        for i in xrange(len(counts)):
+        for i in range(len(counts)):
             if counts[i] > 0:
                 if tstr is None:
                     tstr = "%s=%d" % (prefix[i], counts[i])
