@@ -35,9 +35,9 @@ class RunData(object):
 
         self.__cmd = ["java", ]
         if java_args is not None:
-            if type(java_args) == str:
+            if isinstance(java_args, str):
                 self.__cmd.append(java_args)
-            elif type(java_args) == list or type(java_args) == tuple:
+            elif isinstance(java_args, list) or isinstance(java_args, tuple):
                 self.__cmd += java_args
             else:
                 raise RunnerException("Bad java_args type %s for %s" %
