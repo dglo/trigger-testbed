@@ -42,7 +42,7 @@ class DataFileLister(object):
     def __build_hash(self, cfg_lister):
         cfghash = {}
         for rc in cfg_lister.list():
-            if not cfghash.has_key(rc.hash()):
+            if rc.hash() not in cfghash:
                 cfghash[rc.hash()] = rc
             else:
                 print >>sys.stderr, "Collision: %s overrides %s" % \
@@ -57,7 +57,7 @@ class DataFileLister(object):
 
             rchash = m.group(1)
 
-            if not self.__cfghash.has_key(rchash):
+            if rchash not in self.__cfghash:
                 continue
 
             runcfg = self.__cfghash[rchash]
@@ -129,7 +129,7 @@ if __name__ == "__main__":
 
     if opt.config_dir is not None:
         cfgdir = opt.config_dir
-    elif os.environ.has_key("PDAQ_CONFIG"):
+    elif "PDAQ_CONFIG" in os.environ:
         cfgdir = os.environ["PDAQ_CONFIG"]
     else:
         cfgdir = os.path.join(os.environ["HOME"], "config")

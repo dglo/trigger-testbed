@@ -74,7 +74,7 @@ if __name__ == "__main__":
 
     if opt.config_dir is not None:
         cfgdir = opt.config_dir
-    elif os.environ.has_key("PDAQ_CONFIG"):
+    elif "PDAQ_CONFIG" in os.environ:
         cfgdir = os.environ["PDAQ_CONFIG"]
     else:
         cfgdir = os.path.join(os.environ["HOME"], "config")

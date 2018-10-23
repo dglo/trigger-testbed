@@ -273,7 +273,7 @@ class JavaRunner(object):
     @classmethod
     def __maven_repository_path(cls):
         """Maven repository directory"""
-        if cls.__MAVEN_REPO is None and os.environ.has_key("HOME"):
+        if cls.__MAVEN_REPO is None and "HOME" in os.environ:
             tmpDir = os.path.join(os.environ["HOME"], ".m2", "repository")
             if tmpDir is not None and os.path.exists(tmpDir):
                 cls.__MAVEN_REPO = tmpDir
@@ -282,7 +282,7 @@ class JavaRunner(object):
     @classmethod
     def __pdaq_home(cls):
         """Current active pDAQ directory"""
-        if cls.__PDAQ_HOME is None and os.environ.has_key("PDAQ_HOME"):
+        if cls.__PDAQ_HOME is None and "PDAQ_HOME" in os.environ:
             tmpDir = os.environ["PDAQ_HOME"]
             if tmpDir is not None and os.path.exists(tmpDir):
                 cls.__PDAQ_HOME = tmpDir
