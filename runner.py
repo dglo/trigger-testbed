@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 import datetime
 import os
 import select
@@ -193,8 +195,8 @@ class JavaRunner(object):
                     tmpname = self.__build_jar_name(name, entry)
                     tmpjar = os.path.join(projdir, entry, tmpname)
                     if os.path.exists(tmpjar):
-                        print >>sys.stderr, "WARNING: Using %s version %s" \
-                            " instead of requested %s" % (name, entry, vers)
+                        print("WARNING: Using %s version %s" \
+                            " instead of requested %s" % (name, entry, vers), file=sys.stderr)
                         return tmpjar
 
         dist_dir = self.__distribution_path(self.__DEFAULT_DAQ_RELEASE)
@@ -212,8 +214,8 @@ class JavaRunner(object):
                         vstr = entry[len(namedash):jarext]
                         nvers = LooseVersion(vstr)
                         if overs <= nvers:
-                            print >>sys.stderr, "WARNING: Using %s version %s" \
-                                " instead of requested %s" % (name, vstr, vers)
+                            print("WARNING: Using %s version %s" \
+                                " instead of requested %s" % (name, vstr, vers), file=sys.stderr)
                             return os.path.join(dist_dir, entry)
 
         return None
@@ -294,7 +296,7 @@ class JavaRunner(object):
         self.__exitsig = None
 
         if debug:
-            print " ".join(data.command())
+            print(" ".join(data.command()))
 
         start_time = datetime.datetime.now()
 
@@ -395,7 +397,7 @@ class JavaRunner(object):
             os.environ["CLASSPATH"] = self.__classpath
 
             if debug:
-                print "export CLASSPATH=\"%s\"" % os.environ["CLASSPATH"]
+                print("export CLASSPATH=\"%s\"" % os.environ["CLASSPATH"])
 
         signal.signal(signal.SIGINT, self.quickexit)
         signal.signal(signal.SIGQUIT, self.send_signal)

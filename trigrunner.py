@@ -2,6 +2,8 @@
 #
 # Run one or more trigger components
 
+from __future__ import print_function
+
 import hashlib
 import os
 import signal
@@ -173,7 +175,7 @@ class RunConfig(object):
 
         for h in self.__stringhubs + self.__icetophubs:
             if h < 0:
-                print "Illegal hub#%s in %s" % (h, self)
+                print("Illegal hub#%s in %s" % (h, self))
             elif h < 1000:
                 realhub += 1
             elif h < 2000:
@@ -181,7 +183,7 @@ class RunConfig(object):
             elif h < 3000:
                 testhub += 1
             else:
-                print "Unknown hub#%s in %s" % (h, self)
+                print("Unknown hub#%s in %s" % (h, self))
 
         return [realhub, simhub, testhub]
 
@@ -351,7 +353,7 @@ class RunConfigLister(object):
             try:
                 yield RunConfig(f)
             except RunConfigException, rce:
-                print >> sys.stderr, "Ignoring bad %s (%s)" % (f, rce)
+                print("Ignoring bad %s (%s)" % (f, rce), file=sys.stderr)
 
 
 class RunMinder(object):
@@ -410,7 +412,7 @@ class RunMinder(object):
                 elif next_sig == signal.SIGINT:
                     next_sig = signal.SIGKILL
                 else:
-                    print >> sys.stderr, "Run %d seems to be unkillable!" % run
+                    print("Run %d seems to be unkillable!" % run, file=sys.stderr)
 
         self.__condition.release()
 
@@ -477,9 +479,9 @@ class TriggerRunner(JavaRunner):
 
     @classmethod
     def __print(cls, log, msg):
-        print msg
+        print(msg)
         if log is not None:
-            print >> log, msg
+            print(msg, file=log)
             log.flush()
 
     def process(self, line, is_stderr=False):
@@ -542,7 +544,7 @@ class TriggerRunner(JavaRunner):
                     comp_in_cfg = True
                     comp = "GlobalTriggerComponent"
                 else:
-                    print "Unknown trigger type " + str(ttype)
+                    print("Unknown trigger type " + str(ttype))
                     break
 
                 if not comp_in_cfg:
@@ -572,7 +574,7 @@ class TriggerRunner(JavaRunner):
             comp = "GlobalTriggerComponent"
             comptype = "global"
         else:
-            print "Unknown trigger type %s" % trigtype
+            print("Unknown trigger type %s" % trigtype)
             return
 
         args = ["-C", comp,
@@ -591,7 +593,7 @@ class TriggerRunner(JavaRunner):
         rundata = self.run(java_args, args, debug=debug)
 
         if rundata.exit_signal is not None:
-            print "EMERGENCY EXIT"
+            print("EMERGENCY EXIT")
             self.__cleanup_output()
             raise SystemExit(1)
 

@@ -3,6 +3,8 @@
 # For all existing trigger testbed output files, run the current trigger
 # code and compare it against the previously saved data
 
+from __future__ import print_function
+
 import os
 import re
 import sys
@@ -45,8 +47,8 @@ class DataFileLister(object):
             if rc.hash() not in cfghash:
                 cfghash[rc.hash()] = rc
             else:
-                print >>sys.stderr, "Collision: %s overrides %s" % \
-                    (cfghash[rc.hash()].name(), rc.name())
+                print("Collision: %s overrides %s" % \
+                    (cfghash[rc.hash()].name(), rc.name()), file=sys.stderr)
         return cfghash
 
     def list(self, inice_opt, icetop_opt, global_opt):
@@ -78,7 +80,7 @@ class DataFileLister(object):
             if comptype is None:
                 continue
             if not comp_in_cfg:
-                print "Ignoring %s (%s not in runcfg)" % (f, comp)
+                print("Ignoring %s (%s not in runcfg)" % (f, comp))
                 continue
 
             path = os.path.join(self.__datadir, f)
