@@ -352,7 +352,7 @@ class RunConfigLister(object):
         for f in self.__list_files():
             try:
                 yield RunConfig(f)
-            except RunConfigException, rce:
+            except RunConfigException as rce:
                 print("Ignoring bad %s (%s)" % (f, rce), file=sys.stderr)
 
 
