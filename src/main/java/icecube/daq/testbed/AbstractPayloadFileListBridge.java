@@ -9,8 +9,7 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.util.zip.GZIPInputStream;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.log4j.Logger;
 
 /**
  * An output bridge which reads payloads from a list of files qnd writes
@@ -19,8 +18,8 @@ import org.apache.commons.logging.LogFactory;
 public abstract class AbstractPayloadFileListBridge
     implements Runnable
 {
-    private static final Log LOG =
-        LogFactory.getLog(AbstractPayloadFileListBridge.class);
+    private static final Logger LOG =
+        Logger.getLogger(AbstractPayloadFileListBridge.class);
 
     private int bundleSize;
     private int writeDelay;

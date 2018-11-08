@@ -5,8 +5,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SelectableChannel;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.log4j.Logger;
 
 /**
  * Payload consumer.
@@ -14,7 +13,7 @@ import org.apache.commons.logging.LogFactory;
 public class ChannelConsumer
     implements Consumer, Runnable
 {
-    private static final Log LOG = LogFactory.getLog(ChannelConsumer.class);
+    private static final Logger LOG = Logger.getLogger(ChannelConsumer.class);
 
     private String inputName;
     private ReadableByteChannel chanIn;

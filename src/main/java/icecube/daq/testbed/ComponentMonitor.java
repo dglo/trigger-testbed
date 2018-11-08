@@ -13,8 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.log4j.Logger;
 
 /**
  * Monitor all activity in this component.
@@ -22,7 +21,7 @@ import org.apache.commons.logging.LogFactory;
 public class ComponentMonitor
     extends ActivityMonitor
 {
-    private static final Log LOG = LogFactory.getLog(ComponentMonitor.class);
+    private static final Logger LOG = Logger.getLogger(ComponentMonitor.class);
 
     private DAQTriggerComponent comp;
     private String prefix;

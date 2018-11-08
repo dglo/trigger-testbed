@@ -18,15 +18,14 @@ import java.nio.channels.Pipe;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.log4j.Logger;
 
 /**
  * Base class for DAQ component wrapper.
  */
 public abstract class WrappedComponent
 {
-    private static final Log LOG = LogFactory.getLog(WrappedComponent.class);
+    private static final Logger LOG = Logger.getLogger(WrappedComponent.class);
 
     private DAQTriggerComponent comp;
     private String prefix;
