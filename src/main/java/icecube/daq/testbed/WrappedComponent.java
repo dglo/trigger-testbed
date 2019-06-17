@@ -97,8 +97,6 @@ public abstract class WrappedComponent
     /**
      * Connect to the payload consumer.
      *
-     * @param out output engine
-     * @param outCache output buffer cache
      * @param targetDir output file directory (may not be needed)
      * @param runCfgName run configuration file name
      * @param runNumber run number
@@ -110,12 +108,9 @@ public abstract class WrappedComponent
      *
      * @return newly created payload consumer
      */
-    public Consumer connectToConsumer(DAQComponentOutputProcess out,
-                                      IByteBufferCache outCache,
-                                      List<ITriggerAlgorithm> algorithms,
-                                      File targetDir, String runCfgName,
-                                      int runNumber, int numSrcs,
-                                      int numToSkip, int numToProcess)
+    private Consumer connectToConsumer(File targetDir, String runCfgName,
+                                       int runNumber, int numSrcs,
+                                       int numToSkip, int numToProcess)
         throws IOException
     {
         Pipe outPipe = Pipe.open();
@@ -126,9 +121,12 @@ public abstract class WrappedComponent
         Pipe.SourceChannel srcOut = outPipe.source();
         srcOut.configureBlocking(true);
 
-        out.addDataChannel(sinkOut, outCache);
+        DAQComponentOutputProcess out = comp.getWriter();
+        out.addDataChannel(sinkOut, comp.getOutputCache(), getName());
 
         final int trigId;
+
+        List<ITriggerAlgorithm> algorithms = comp.getAlgorithms();
         if (algorithms == null || algorithms.size() == 0) {
             throw new IOException("List of algorithms cannot be null or" +
                                   " empty");
@@ -366,9 +364,7 @@ public abstract class WrappedComponent
                                         numToSkip, numToProcess);
         }
 
-        Consumer consumer = connectToConsumer(comp.getWriter(),
-                                              comp.getOutputCache(),
-                                              comp.getAlgorithms(), targetDir,
+        Consumer consumer = connectToConsumer(targetDir,
                                               runCfg.getName(), runNum,
                                               numSrcs, numToSkip,
                                               numToProcess);

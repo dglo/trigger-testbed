@@ -137,37 +137,38 @@ public class SimpleHitFilter
     {
         final String hsBase = "HitSpool";
 
-        // find start of numeric string
-        final int idx;
-        if (name.startsWith(hubBase)) {
-            idx = hubBase.length();
-        } else if (name.startsWith(hsBase)) {
-            idx = hsBase.length();
-        } else {
-            idx = -1;
-        }
-
         String numStr;
-        if (idx > 0) {
-            // find end of numeric string
-            int end = name.indexOf("_", idx + 1);
-            if (end < 0) {
-                end = name.indexOf(".", idx + 1);
-                if (end < 0) {
-                    throw new Error("Cannot find end of file number in \"" +
-                                    name + "\" (hub \"" + hubBase +
-                                    "\" hs \"" + hsBase + "\")");
-                }
+
+        Matcher mtch = simplePat.matcher(name);
+        if (mtch.matches()) {
+            numStr = mtch.group(4);
+        } else {
+            // find start of numeric string
+            final int idx;
+            if (name.startsWith(hubBase)) {
+                idx = hubBase.length();
+            } else if (name.startsWith(hsBase)) {
+                idx = hsBase.length();
+            } else {
+                idx = -1;
             }
 
-            // extract numeric string
-            numStr = name.substring(idx + 1, end);
-        } else {
-            Matcher mtch = simplePat.matcher(name);
-            if (mtch.matches()) {
-                numStr = mtch.group(4);
-            } else {
+            if (idx <= 0) {
                 numStr = null;
+            } else {
+                // find end of numeric string
+                int end = name.indexOf("_", idx + 1);
+                if (end < 0) {
+                    end = name.indexOf(".", idx + 1);
+                    if (end < 0) {
+                        throw new Error("Cannot find end of file number in" +
+                                        "  \"" + name + "\" (hub \"" +
+                                        hubBase + "\" hs \"" + hsBase + "\")");
+                    }
+                }
+
+                // extract numeric string
+                numStr = name.substring(idx + 1, end);
             }
         }
 
