@@ -146,7 +146,7 @@ public class ComponentMonitor
             try {
                 rtnval = methods[i].invoke(obj);
             } catch (Exception ex) {
-                ex.printStackTrace(out);
+                ex.printStackTrace();
                 continue;
             }
 
