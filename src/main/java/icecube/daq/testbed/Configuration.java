@@ -74,17 +74,15 @@ class AlgorithmData
         "icecube.daq.trigger.algorithm";
 
     private String name;
-    private int type;
     private int cfgId;
     private int srcId;
     private HashMap<String, String> parameters = new HashMap<String, String>();
     private ArrayList<TriggerReadout> readouts =
         new ArrayList<TriggerReadout>();
 
-    AlgorithmData(String name, int type, int cfgId, int srcId)
+    AlgorithmData(String name, int cfgId, int srcId)
     {
         this.name = name;
-        this.type = type;
         this.cfgId = cfgId;
         this.srcId = srcId;
     }
@@ -206,7 +204,6 @@ class AlgorithmData
         ITriggerAlgorithm algo = (ITriggerAlgorithm) createObject(classObj);
         algo.setSourceId(srcId);
         algo.setTriggerConfigId(cfgId);
-        algo.setTriggerType(type);
 
         for (TriggerReadout rdout : readouts) {
             algo.addReadout(rdout.getType(), rdout.getOffset(),
@@ -248,16 +245,10 @@ class AlgorithmData
         return srcId;
     }
 
-    public int getType()
-    {
-        return type;
-    }
-
     @Override
     public String toString()
     {
-        return String.format("%s[#%d cfg %d src %d]", name, type, cfgId,
-                             srcId);
+        return String.format("%s[cfg %d src %d]", name, cfgId, srcId);
     }
 }
 
@@ -723,7 +714,7 @@ public class Configuration
                                           " from run configuration " + file);
             }
 
-            AlgorithmData ad = new AlgorithmData(name, type, cfgId, srcId);
+            AlgorithmData ad = new AlgorithmData(name, cfgId, srcId);
             parseTriggerParameters(ad, n);
             parseTriggerReadout(ad, n);
 
@@ -809,22 +800,25 @@ public class Configuration
 
     public void setTriggerNames()
     {
-        int max = Integer.MIN_VALUE;
+        // maximum trigger type in 2019 is 24
+        String[] typeNames = new String[100];
         for (AlgorithmData ad : algorithmData) {
-            if (ad.getType() >= max) {
-                max = ad.getType();
+            ITriggerAlgorithm obj;
+            try {
+                obj = ad.create(false);
+            } catch (ConfigException jex) {
+                System.err.println("Cannot create " + ad.getName());
+                jex.printStackTrace();
+                continue;
             }
-        }
 
-        String[] typeNames = new String[max + 1];
-        for (AlgorithmData ad : algorithmData) {
-            if (ad.getType() >= 0) {
+            if (obj.getTriggerType() >= 0) {
                 String name = ad.getName();
                 if (name.endsWith("Trigger")) {
                     name = name.substring(0, name.length() - 7);
                 }
 
-                typeNames[ad.getType()] = name;
+                typeNames[obj.getTriggerType()] = name;
             }
         }
 
