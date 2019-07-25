@@ -1,6 +1,8 @@
 package icecube.daq.testbed;
 
 import icecube.daq.common.ANSIEscapeCode;
+import icecube.daq.payload.impl.SimpleHit;
+import icecube.daq.payload.impl.SimplerHit;
 import icecube.daq.trigger.exceptions.ConfigException;
 import icecube.daq.util.DOMRegistryFactory;
 import icecube.daq.util.IDOMRegistry;
@@ -64,6 +66,10 @@ public class TestBed
      */
     public boolean run()
     {
+        // initialize DOM registry for simple hit classes
+        SimpleHit.setDOMRegistry(registry);
+        SimplerHit.setDOMRegistry(registry);
+
         // set log level
         Logger.getRootLogger().setLevel(logLevel);
         APPENDER.setLevel(logLevel);

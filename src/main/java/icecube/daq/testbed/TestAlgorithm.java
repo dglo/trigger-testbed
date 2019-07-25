@@ -7,6 +7,7 @@ import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.payload.impl.DOMHit;
 import icecube.daq.payload.impl.PayloadFactory;
 import icecube.daq.payload.impl.SimpleHit;
+import icecube.daq.payload.impl.SimplerHit;
 import icecube.daq.payload.impl.TriggerRequestFactory;
 import icecube.daq.splicer.HKN1Splicer;
 import icecube.daq.splicer.SplicedAnalysis;
@@ -722,8 +723,9 @@ public class TestAlgorithm
     private boolean run()
         throws IOException
     {
-        // initialize SimpleHit DOM registry
+        // initialize DOM registry for simple hit classes
         SimpleHit.setDOMRegistry(registry);
+        SimplerHit.setDOMRegistry(registry);
 
         AlgorithmDeathmatch deathmatch = null;
         if (oldAlgorithm != null) {
