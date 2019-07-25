@@ -149,6 +149,8 @@ public class SimpleHitFilter
                 idx = hubBase.length();
             } else if (name.startsWith(hsBase)) {
                 idx = hsBase.length();
+            } else if (name.startsWith("ic" + hubBase)) {
+                idx = hubBase.length() + 2;
             } else {
                 idx = -1;
             }
@@ -232,8 +234,8 @@ public class SimpleHitFilter
             }
 
             String msg =
-                String.format("Cannot find hit files for%s %s",
-                              runStr, filter.basename());
+                String.format("Cannot find hit files for%s %s in %s or %s",
+                              runStr, filter.basename(), runDir, srcDir);
             throw new IOException(msg);
         }
 
