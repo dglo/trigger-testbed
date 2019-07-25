@@ -4,6 +4,8 @@ import icecube.daq.io.DAQComponentOutputProcess;
 import icecube.daq.juggler.alert.AlertQueue;
 import icecube.daq.payload.IPayload;
 import icecube.daq.payload.ITriggerRequestPayload;
+import icecube.daq.payload.impl.SimpleHit;
+import icecube.daq.payload.impl.SimplerHit;
 import icecube.daq.payload.impl.TriggerRequestFactory;
 import icecube.daq.splicer.Splicer;
 import icecube.daq.trigger.algorithm.AlgorithmStatistics;
@@ -359,6 +361,40 @@ public class AlgorithmDeathmatch
         }
 
         return oldIval;
+    }
+
+    @Override
+    public long getLatency()
+    {
+        final int pos = 6;
+
+        long oldLatency = 0L;
+        long newLatency = 0L;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getMatchingTimer(algo);
+
+            timer.start(pos);
+            try {
+                long latency = algo.getLatency();
+                if (algo == oldAlgorithm) {
+                    oldLatency = latency;
+                } else {
+                    newLatency = latency;
+                }
+            } finally {
+                timer.stop(pos);
+            }
+        }
+
+        if (newLatency != oldLatency) {
+            System.err.println("MISMATCH in getLatency:" +
+                               " old " + oldLatency + ", new " + newLatency);
+        }
+
+        return oldLatency;
     }
 
     @Override
