@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import os
-import platform
 import sys
 
 def find_dash_directory():
@@ -26,7 +25,7 @@ from RunJava import JavaRunner
 MAIN_CLASS = "icecube.daq.testbed.TimeTrigger"
 
 # Java max memory
-JAVA_ARGS = "-Xmx4000m"
+JAVA_ARGS = ("-Xmx4000m", )
 
 # required jar files from subprojects and Maven repository
 SUBPROJECT_PKGS = ("daq-common", "splicer", "payload", "daq-io", "juggler",
