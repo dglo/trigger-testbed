@@ -217,14 +217,14 @@ public class SimpleHitFilter
         SimpleHitFilter filter = new SimpleHitFilter(hubId, runNum);
 
         File runDir = new File(srcDir, String.format("run%06d", runNum));
-
-        File[] hitfiles;
-        if (runDir.exists()) {
-            hitfiles = runDir.listFiles(filter);
-        } else {
-            hitfiles = srcDir.listFiles(filter);
+        if (!runDir.exists()) {
+            System.err.println("Run directory \"" + runDir +
+                               "\" does not exist, falling back to \"" +
+                               srcDir + "\"");
+            runDir = srcDir;
         }
 
+        File[] hitfiles = runDir.listFiles(filter);
         if (hitfiles.length == 0) {
             String runStr;
             if (runNum <= 0) {
@@ -234,8 +234,8 @@ public class SimpleHitFilter
             }
 
             String msg =
-                String.format("Cannot find hit files for%s %s in %s or %s",
-                              runStr, filter.basename(), runDir, srcDir);
+                String.format("Cannot find hit files for%s %s in %s",
+                              runStr, filter.basename(), runDir);
             throw new IOException(msg);
         }
 
