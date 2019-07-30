@@ -13,6 +13,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import javax.management.DynamicMBean;
+import javax.management.MBeanAttributeInfo;
+import javax.management.MBeanInfo;
+
 import org.apache.log4j.Logger;
 
 /**
@@ -75,70 +79,70 @@ public class ComponentMonitor
         return changed;
     }
 
-    private void dumpMBeanDynamic(PrintStream out,
-                                  javax.management.DynamicMBean mbean,
-                                  String indent)
+    private void dumpMBeanData(DumpState state, Object obj, Class cls)
     {
-        javax.management.MBeanInfo info = mbean.getMBeanInfo();
-        javax.management.MBeanAttributeInfo[] attrs = info.getAttributes();
+        Class[] ifaces = cls.getInterfaces();
+        for (int i = 0; i < ifaces.length; i++) {
+            if (ifaces[i].getName().endsWith("MBean")) {
+                if (ifaces[i].getName().endsWith("DynamicMBean")) {
+                    dumpMBeanDynamic(state, (DynamicMBean) obj);
+                } else {
+                    dumpMBeanInterface(state, obj, ifaces[i]);
+                }
+                break;
+            }
+        }
+
+        Class clsSuper = cls.getSuperclass();
+        if (clsSuper != null) {
+            dumpMBeanData(state, obj, clsSuper);
+        }
+    }
+
+    private void dumpMBeanDynamic(DumpState state, DynamicMBean mbean)
+    {
+        MBeanInfo info = mbean.getMBeanInfo();
+        MBeanAttributeInfo[] attrs = info.getAttributes();
         for (int i = 0; i < attrs.length; i++) {
             if (!attrs[i].isReadable()) {
-                out.println(indent + "!" + attrs[i].getName());
+                final String beanName = mbean.getMBeanInfo().getClassName();
+                System.err.println("ERROR: Unreadable " + beanName + " attr#" +
+                                   i + ": " + attrs[i].getName());
             } else {
                 Object rtnval;
                 try {
                     rtnval = mbean.getAttribute(attrs[i].getName());
                 } catch (Exception ex) {
-                    ex.printStackTrace(out);
+                    ex.printStackTrace();
                     continue;
                 }
 
-                out.println(indent + attrs[i].getName() + ": " +
-                            getMBeanValueString(rtnval));
+                state.add(attrs[i].getName(), rtnval);
             }
         }
     }
 
-    private void dumpMBeanData(PrintStream out, Object obj, String indent)
-    {
-        Class cls = obj.getClass();
-
-        Class[] ifaces = cls.getInterfaces();
-        for (int i = 0; i < ifaces.length; i++) {
-            if (ifaces[i].getName().endsWith("MBean")) {
-                if (ifaces[i].getName().endsWith("DynamicMBean")) {
-                    dumpMBeanDynamic(out, (javax.management.DynamicMBean) obj,
-                                     indent);
-                } else {
-                    dumpMBeanInterface(out, obj, ifaces[i], indent);
-                }
-                break;
-            }
-        }
-    }
-
-    private void dumpMBeanInterface(PrintStream out, Object obj, Class iface,
-                                    String indent)
+    private void dumpMBeanInterface(DumpState state, Object obj, Class iface)
     {
         Method[] methods = iface.getMethods();
         for (int i = 0; i < methods.length; i++) {
             Class[] params = methods[i].getParameterTypes();
             if (params != null && params.length > 0) {
-                out.println(indent + "*** " + obj.getClass().getName() +
-                            " MBean method " + iface.getName() +
-                            " should not have any parameters");
+                System.err.println("ERROR: " + obj.getClass().getName() +
+                                   " MBean method " + iface.getName() +
+                                   " should not have any parameters");
                 continue;
             }
 
-            String name = methods[i].getName();
-            if (name.startsWith("get")) {
-                name = name.substring(3);
-            } else if (name.startsWith("is")) {
-                name = name.substring(2);
+            String mthdName = methods[i].getName();
+            if (mthdName.startsWith("get")) {
+                mthdName = mthdName.substring(3);
+            } else if (mthdName.startsWith("is")) {
+                mthdName = mthdName.substring(2);
             } else {
-                out.println(indent + "*** " + obj.getClass().getName() +
-                            " MBean method " + iface.getName() +
-                            " does not start with \"get\" or \"is\"");
+                System.err.println("ERROR: " + obj.getClass().getName() +
+                                   " MBean method " + iface.getName() +
+                                   " does not start with \"get\" or \"is\"");
                 continue;
             }
 
@@ -150,7 +154,7 @@ public class ComponentMonitor
                 continue;
             }
 
-            out.println(indent + name + ": " + getMBeanValueString(rtnval));
+            state.add(mthdName, rtnval);
         }
     }
 
@@ -161,18 +165,20 @@ public class ComponentMonitor
             return;
         }
 
-        String dateStr = getFakeDateString(rep);
+        DumpState state = new DumpState(out, getFakeDateString(rep));
         for (String name : names) {
-            //out.print(ANSIEscapeCode.FG_YELLOW + ANSIEscapeCode.BG_BLUE);
-            out.println(name + ": " + dateStr + ":");
+            state.setName(name);
+            Object obj;
             try {
-                dumpMBeanData(out, comp.getMBean(name), "    ");
+                obj = comp.getMBean(name);
             } catch (DAQCompException dce) {
-                dce.printStackTrace(out);
+                dce.printStackTrace();
+                continue;
             }
-            out.println();
+
+            dumpMBeanData(state, obj, obj.getClass());
+            state.finish();
         }
-        //out.println(ANSIEscapeCode.OFF);
     }
 
     /**
@@ -199,9 +205,14 @@ public class ComponentMonitor
         return comp.getTriggerManager().getAlgorithmStatistics();
     }
 
-    private String getFakeDateString(int rep)
+    /**
+     * Return a fake date string based on the interation counter
+     *
+     * @return monitoring date string
+     */
+    private String getFakeDateString(int count)
     {
-        int min = rep * 5;
+        int min = count * 5;
 
         int hour;
         if (min < 60) {
@@ -237,38 +248,6 @@ public class ComponentMonitor
 
         final String fmt = "%04d-%02d-%02d %02d:%02d:%02d.%06d";
         return String.format(fmt, year, month + 1, day, hour, min, 0, 0);
-    }
-
-    private String getMBeanValueString(Object obj)
-    {
-        if (obj == null) {
-            return "null";
-        } else if (obj.getClass().isArray()) {
-            StringBuilder strBuf = new StringBuilder("[");
-            final int len = Array.getLength(obj);
-            for (int i = 0; i < len; i++) {
-                if (strBuf.length() > 1) {
-                    strBuf.append(", ");
-                }
-                strBuf.append(getMBeanValueString(Array.get(obj, i)));
-            }
-            strBuf.append("]");
-            return strBuf.toString();
-        } else if (obj.getClass().equals(HashMap.class)) {
-            StringBuilder strBuf = new StringBuilder("{");
-            HashMap map = (HashMap) obj;
-            for (Object key : map.keySet()) {
-                if (strBuf.length() > 1) {
-                    strBuf.append(", ");
-                }
-                strBuf.append('\'').append(getMBeanValueString(key));
-                strBuf.append("': ").append(getMBeanValueString(map.get(key)));
-            }
-            strBuf.append("}");
-            return strBuf.toString();
-        } else {
-            return obj.toString();
-        }
     }
 
     @Override
@@ -334,5 +313,82 @@ public class ComponentMonitor
     public void resumeInput()
     {
         comp.getReader().unpause();
+    }
+
+    class DumpState
+    {
+        private String indent = "    ";
+
+        private PrintStream out;
+        private String dateStr;
+
+        private String objectName;
+        private boolean printed;
+
+        DumpState(PrintStream out, String dateStr)
+        {
+            this.out = out;
+            this.dateStr = dateStr;
+
+            objectName = "??UNSET??";
+        }
+
+        void add(String name, Object value)
+        {
+            if (!printed) {
+                //out.print(ANSIEscapeCode.FG_YELLOW + ANSIEscapeCode.BG_BLUE);
+                out.println(objectName + ": " + dateStr + ":");
+                printed = true;
+            }
+            //out.print(ANSIEscapeCode.FG_YELLOW + ANSIEscapeCode.BG_BLUE);
+            out.println(indent + name + ": " + formatMBeanValue(value));
+            //out.println(ANSIEscapeCode.OFF);
+        }
+
+        void finish()
+        {
+            if (printed) {
+                out.println();
+            }
+        }
+
+        private String formatMBeanValue(Object obj)
+        {
+            if (obj == null) {
+                return "null";
+            } else if (obj.getClass().isArray()) {
+                StringBuilder strBuf = new StringBuilder("[");
+                final int len = Array.getLength(obj);
+                for (int i = 0; i < len; i++) {
+                    if (strBuf.length() > 1) {
+                        strBuf.append(", ");
+                    }
+                    strBuf.append(formatMBeanValue(Array.get(obj, i)));
+                }
+                strBuf.append("]");
+                return strBuf.toString();
+            } else if (obj.getClass().equals(HashMap.class)) {
+                StringBuilder strBuf = new StringBuilder("{");
+                HashMap map = (HashMap) obj;
+                for (Object key : map.keySet()) {
+                    if (strBuf.length() > 1) {
+                        strBuf.append(", ");
+                    }
+                    final Object value = map.get(key);
+                    strBuf.append('\'').append(formatMBeanValue(key));
+                    strBuf.append("': ").append(formatMBeanValue(value));
+                }
+                strBuf.append("}");
+                return strBuf.toString();
+            } else {
+                return obj.toString();
+            }
+        }
+
+        void setName(String name)
+        {
+            objectName = name;
+            printed = false;
+        }
     }
 }
