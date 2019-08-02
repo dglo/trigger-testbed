@@ -15,8 +15,8 @@ JAVA_ARGS = ""
 # required jar files from subprojects and Maven repository
 SUBPROJECT_PKGS = ("daq-common", "splicer", "payload", "daq-io", "juggler",
                    "trigger", "trigger-testbed")
-REPO_PKGS = [("log4j", "log4j", "1.2.12"),
-             ("commons-logging", "commons-logging", "1.0.4")]
+REPO_PKGS = [("log4j", "log4j", "1.2.17"),
+             ("commons-logging", "commons-logging", "1.1")]
 
 
 def find_dash_directory():
