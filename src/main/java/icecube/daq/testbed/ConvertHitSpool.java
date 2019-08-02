@@ -680,22 +680,25 @@ public class ConvertHitSpool
         }
 
         // add run/hub subdirectories to srcDir
-        finishSourceDirectory();
+        if (!usage) {
+            finishSourceDirectory();
 
-        if (fileList.size() > 0) {
-            files = fileList.toArray(new File[0]);
-        } else {
-            try {
-                files = HubPayloadFilter.listFiles(srcDir, hubNumber);
-                if (files.length == 0) {
+            if (fileList.size() > 0) {
+                files = fileList.toArray(new File[0]);
+            } else {
+                try {
+                    files = HubPayloadFilter.listFiles(srcDir, hubNumber);
+                    if (files.length == 0) {
+                        System.err.println("Cannot find files for hub #" +
+                                           hubNumber + " in " + srcDir);
+                        usage = true;
+                    }
+                } catch (IOException ioe) {
                     System.err.println("Cannot find files for hub #" +
-                                       hubNumber + " in " + srcDir);
+                                       hubNumber);
+                    ioe.printStackTrace();
                     usage = true;
                 }
-            } catch (IOException ioe) {
-                System.err.println("Cannot find files for hub #" + hubNumber);
-                ioe.printStackTrace();
-                usage = true;
             }
         }
 
