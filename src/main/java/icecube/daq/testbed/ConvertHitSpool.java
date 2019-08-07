@@ -194,18 +194,6 @@ class HubPayloadFilter
     {
         Arrays.sort(files, this);
     }
-
-    /**
-     * Sort the list of files.
-     *
-     * @param files list of files
-     */
-/*
-    public void sort(List<File> files)
-    {
-        Collections.sort(files, this);
-    }
-*/
 }
 
 public class ConvertHitSpool
