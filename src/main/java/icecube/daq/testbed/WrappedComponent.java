@@ -5,6 +5,7 @@ import icecube.daq.io.DAQComponentOutputProcess;
 import icecube.daq.juggler.alert.AlertQueue;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.payload.IByteBufferCache;
+import icecube.daq.payload.MiscUtil;
 import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.trigger.algorithm.ITriggerAlgorithm;
 import icecube.daq.trigger.component.DAQTriggerComponent;
@@ -201,7 +202,7 @@ public abstract class WrappedComponent
             File[] files = SimpleHitFilter.listFiles(srcDir, hubId, runNum);
 
             PayloadFileListBridge bridge =
-                new PayloadFileListBridge(SimpleHitFilter.getHubName(hubId),
+                new PayloadFileListBridge(MiscUtil.formatHubID(hubId),
                                           files, tails[h].sink());
             bridge.setNumberToSkip(numToSkip);
             bridge.setMaximumPayloads(numToProcess);

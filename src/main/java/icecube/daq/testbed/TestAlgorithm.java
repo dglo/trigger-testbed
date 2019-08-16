@@ -2,6 +2,7 @@ package icecube.daq.testbed;
 
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.IPayload;
+import icecube.daq.payload.MiscUtil;
 import icecube.daq.payload.PayloadException;
 import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.payload.impl.DOMHit;
@@ -185,7 +186,7 @@ public class TestAlgorithm
             new PayloadFileToSplicerBridge[numSrcs];
         for (int h = 0; h < numSrcs; h++) {
             final int hubId = hubs.get(h);
-            final String hubName = SimpleHitFilter.getHubName(hubId);
+            final String hubName = MiscUtil.formatHubID(hubId);
 
             File[] files = SimpleHitFilter.listFiles(srcDir, hubId, runNumber);
 
