@@ -85,6 +85,7 @@ public class TimeTrigger
         for (ITriggerAlgorithm a : list) {
             a.setSourceId(SourceIdRegistry.INICE_TRIGGER_SOURCE_ID);
             a.setTriggerConfigId(1007);
+            a.setTriggerType(14);
 
             try {
                 a.addParameter("multiplicity", "5");

@@ -13,7 +13,6 @@ import icecube.daq.trigger.control.ITriggerManager;
 import icecube.daq.trigger.control.Interval;
 import icecube.daq.trigger.control.PayloadSubscriber;
 import icecube.daq.trigger.control.SubscribedList;
-import icecube.daq.trigger.exceptions.ConfigException;
 import icecube.daq.trigger.exceptions.IllegalParameterValueException;
 import icecube.daq.trigger.exceptions.TriggerException;
 import icecube.daq.trigger.exceptions.UnknownParameterException;
@@ -172,14 +171,29 @@ public class AlgorithmDeathmatch
 
     private Random random = new Random();
 
-    private int numFailed;
-    private int numWritten;
-
     public AlgorithmDeathmatch(ITriggerAlgorithm newAlgorithm,
                                ITriggerAlgorithm oldAlgorithm)
     {
         this.newAlgorithm = newAlgorithm;
         this.oldAlgorithm = oldAlgorithm;
+    }
+
+    private ITriggerAlgorithm getRandomAlgorithm(boolean oldFirst, int index)
+    {
+        if (oldFirst) {
+            return (index == 0 ? oldAlgorithm : newAlgorithm);
+        }
+
+        return (index == 0 ? newAlgorithm : oldAlgorithm);
+    }
+
+    private CodeTimer getRandomTimer(boolean oldFirst, int index)
+    {
+        if (oldFirst) {
+            return (index == 0 ? oldTimer : newTimer);
+        }
+
+        return (index == 0 ? newTimer : oldTimer);
     }
 
     @Override
@@ -191,7 +205,7 @@ public class AlgorithmDeathmatch
         final boolean oldFirst = random.nextBoolean();
         for (int i = 0; i < 2; i++) {
             ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
 
             timer.start(pos);
             try {
@@ -210,7 +224,7 @@ public class AlgorithmDeathmatch
         final boolean oldFirst = random.nextBoolean();
         for (int i = 0; i < 2; i++) {
             ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
 
             timer.start(pos);
             try {
@@ -219,13 +233,6 @@ public class AlgorithmDeathmatch
                 timer.stop(pos);
             }
         }
-    }
-
-    @Override
-    public void checkTriggerType(int type)
-        throws ConfigException
-    {
-        oldAlgorithm.checkTriggerType(type);
     }
 
     @Override
@@ -242,7 +249,7 @@ public class AlgorithmDeathmatch
         final boolean oldFirst = random.nextBoolean();
         for (int i = 0; i < 2; i++) {
             ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
 
             timer.start(pos);
             try {
@@ -251,11 +258,6 @@ public class AlgorithmDeathmatch
                 timer.stop(pos);
             }
         }
-    }
-
-    public ITriggerAlgorithm getAlgorithm()
-    {
-        return newAlgorithm;
     }
 
     @Override
@@ -269,7 +271,7 @@ public class AlgorithmDeathmatch
         final boolean oldFirst = random.nextBoolean();
         for (int i = 0; i < 2; i++) {
             ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
 
             timer.start(pos);
             try {
@@ -313,7 +315,7 @@ public class AlgorithmDeathmatch
         final boolean oldFirst = random.nextBoolean();
         for (int i = 0; i < 2; i++) {
             ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
 
             Interval tmpIval = new Interval();
             tmpIval.start = interval.start;
@@ -341,70 +343,9 @@ public class AlgorithmDeathmatch
     }
 
     @Override
-    public long getLatency()
-    {
-        final int pos = 6;
-
-        long oldLatency = 0L;
-        long newLatency = 0L;
-
-        final boolean oldFirst = random.nextBoolean();
-        for (int i = 0; i < 2; i++) {
-            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
-
-            timer.start(pos);
-            try {
-                long latency = algo.getLatency();
-                if (algo == oldAlgorithm) {
-                    oldLatency = latency;
-                } else {
-                    newLatency = latency;
-                }
-            } finally {
-                timer.stop(pos);
-            }
-        }
-
-        if (newLatency != oldLatency) {
-            System.err.println("MISMATCH in getLatency:" +
-                               " old " + oldLatency + ", new " + newLatency);
-        }
-
-        return oldLatency;
-    }
-
-    private CodeTimer getMatchingTimer(ITriggerAlgorithm algorithm)
-    {
-        if (algorithm == oldAlgorithm) {
-            return oldTimer;
-        } else if (algorithm != newAlgorithm) {
-            throw new Error("Unknown algorithm \"" +
-                            algorithm.getClass().getName() + "\"");
-        }
-
-        return newTimer;
-    }
-
-    @Override
     public String getMonitoringName()
     {
         return oldAlgorithm.getMonitoringName();
-    }
-
-    public ITriggerAlgorithm getNewAlgorithm()
-    {
-        return newAlgorithm;
-    }
-
-    /**
-     * Get the number of bad payloads.
-     *
-     * @return number of bad payloads
-     */
-    public int getNumberFailed()
-    {
-        return numFailed;
     }
 
     @Override
@@ -417,7 +358,7 @@ public class AlgorithmDeathmatch
         final boolean oldFirst = random.nextBoolean();
         for (int i = 0; i < 2; i++) {
             ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
 
             timer.start(pos);
             try {
@@ -441,30 +382,6 @@ public class AlgorithmDeathmatch
         return oldVal;
     }
 
-    /**
-     * Get the number of successfully consumed payloads.
-     *
-     * @return number of payloads
-     */
-    public int getNumberWritten()
-    {
-        return numWritten;
-    }
-
-    public ITriggerAlgorithm getOldAlgorithm()
-    {
-        return oldAlgorithm;
-    }
-
-    private ITriggerAlgorithm getRandomAlgorithm(boolean oldFirst, int index)
-    {
-        if (oldFirst) {
-            return (index == 0 ? oldAlgorithm : newAlgorithm);
-        }
-
-        return (index == 0 ? newAlgorithm : oldAlgorithm);
-    }
-
     @Override
     public long getReleaseTime()
     {
@@ -481,7 +398,7 @@ public class AlgorithmDeathmatch
         final boolean oldFirst = random.nextBoolean();
         for (int i = 0; i < 2; i++) {
             ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
 
             timer.start(pos);
             try {
@@ -516,23 +433,10 @@ public class AlgorithmDeathmatch
         final double oldTotal = (double) oldTimer.getTotalTime();
         final double newTotal = (double) newTimer.getTotalTime();
 
-        final long oldTime =
-            oldAlgorithm.getEarliestPayloadOfInterest().getUTCTime();
-        final long newTime =
-            newAlgorithm.getEarliestPayloadOfInterest().getUTCTime();
-        String timeStr;
-        if (oldTime == newTime) {
-            timeStr = "";
-        } else {
-            timeStr =
-                String.format("\nNew time %d != old time %d (%d difference)",
-                              newTime, oldTime, newTime - oldTime);
-        }
-
         return oldTimer.getStats(oldAlgorithm.getClass().getName()) + "\n" +
             newTimer.getStats(newAlgorithm.getClass().getName()) + "\n" +
             String.format("Old algorithm takes %.2f%% as long as new",
-                          (oldTotal / newTotal) * 100.0) + timeStr;
+                          (oldTotal / newTotal) * 100.0);
     }
 
     @Override
@@ -557,7 +461,7 @@ public class AlgorithmDeathmatch
         final boolean oldFirst = random.nextBoolean();
         for (int i = 0; i < 2; i++) {
             ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
 
             timer.start(pos);
             try {
@@ -609,7 +513,7 @@ public class AlgorithmDeathmatch
         final boolean oldFirst = random.nextBoolean();
         for (int i = 0; i < 2; i++) {
             ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
 
             timer.start(pos);
             try {
@@ -652,7 +556,7 @@ public class AlgorithmDeathmatch
         final boolean oldFirst = random.nextBoolean();
         for (int i = 0; i < 2; i++) {
             ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
 
             timer.start(pos);
             try {
@@ -685,7 +589,7 @@ public class AlgorithmDeathmatch
         final boolean oldFirst = random.nextBoolean();
         for (int i = 0; i < 2; i++) {
             ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
 
             timer.start(pos);
             try {
@@ -708,17 +612,6 @@ public class AlgorithmDeathmatch
         return oldVal;
     }
 
-    /**
-     * Has this algorithm finished with all incoming payloads?
-     *
-     * @return <tt>true</tt> if the algorithm has processed all its data
-     */
-    @Override
-    public boolean isStopped()
-    {
-        return subscriber.isStopped();
-    }
-
     @Override
     public void recycleUnusedRequests()
     {
@@ -726,7 +619,7 @@ public class AlgorithmDeathmatch
         final boolean oldFirst = random.nextBoolean();
         for (int i = 0; i < 2; i++) {
             ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
 
             timer.start(pos);
             try {
@@ -752,7 +645,7 @@ public class AlgorithmDeathmatch
         final boolean oldFirst = random.nextBoolean();
         for (int i = 0; i < 2; i++) {
             ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
 
             timer.start(pos);
             try {
@@ -771,7 +664,7 @@ public class AlgorithmDeathmatch
         final boolean oldFirst = random.nextBoolean();
         for (int i = 0; i < 2; i++) {
             ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
 
             timer.start(pos);
             try {
@@ -792,7 +685,7 @@ public class AlgorithmDeathmatch
             final boolean oldFirst = random.nextBoolean();
             for (int i = 0; i < 2; i++) {
                 ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-                CodeTimer timer = getMatchingTimer(algo);
+                CodeTimer timer = getRandomTimer(oldFirst, i);
 
                 timer.start(pos);
                 try {
@@ -812,7 +705,7 @@ public class AlgorithmDeathmatch
         final boolean oldFirst = random.nextBoolean();
         for (int i = 0; i < 2; i++) {
             ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
 
             timer.start(pos);
             try {
@@ -823,10 +716,9 @@ public class AlgorithmDeathmatch
         }
     }
 
-    private static int releaseAll(ITriggerAlgorithm algorithm,
-                                  List<ITriggerRequestPayload> released)
+    private static void releaseAll(ITriggerAlgorithm algorithm,
+                                   List<ITriggerRequestPayload> released)
     {
-        int numReleased = 0;
         while (true) {
             Interval ival = algorithm.getInterval(new Interval());
             if (ival == null) {
@@ -834,15 +726,11 @@ public class AlgorithmDeathmatch
             }
 
             final int len = released.size();
-            final int num = algorithm.release(ival, released);
-            numReleased += num;
-
-            // if no new hits were released, we're done
+            algorithm.release(ival, released);
             if (released.size() == len) {
                 break;
             }
         }
-        return numReleased;
     }
 
     @Override
@@ -853,7 +741,7 @@ public class AlgorithmDeathmatch
         final boolean oldFirst = random.nextBoolean();
         for (int i = 0; i < 2; i++) {
             ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
 
             List<ITriggerRequestPayload> released;
             if (algo == oldAlgorithm) {
@@ -864,10 +752,7 @@ public class AlgorithmDeathmatch
 
             timer.start(pos);
             try {
-                final int num = releaseAll(algo, released);
-                if (i == 1) {
-                    numWritten += num;
-                }
+                releaseAll(algo, released);
             } finally {
                 timer.stop(pos);
             }
@@ -892,7 +777,7 @@ public class AlgorithmDeathmatch
         final boolean oldFirst = random.nextBoolean();
         for (int i = 0; i < 2; i++) {
             ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
 
             timer.start(pos);
             try {
@@ -929,7 +814,7 @@ public class AlgorithmDeathmatch
         final boolean oldFirst = random.nextBoolean();
         for (int i = 0; i < 2; i++) {
             ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
 
             timer.start(pos);
             try {
@@ -948,7 +833,7 @@ public class AlgorithmDeathmatch
         final boolean oldFirst = random.nextBoolean();
         for (int i = 0; i < 2; i++) {
             ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
 
             timer.start(pos);
             try {
@@ -975,11 +860,30 @@ public class AlgorithmDeathmatch
         final boolean oldFirst = random.nextBoolean();
         for (int i = 0; i < 2; i++) {
             ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
 
             timer.start(pos);
             try {
                 algo.setTriggerName(name);
+            } finally {
+                timer.stop(pos);
+            }
+        }
+    }
+
+    @Override
+    public void setTriggerType(int trigType)
+    {
+        final int pos = 98;
+
+        final boolean oldFirst = random.nextBoolean();
+        for (int i = 0; i < 2; i++) {
+            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
+            CodeTimer timer = getRandomTimer(oldFirst, i);
+
+            timer.start(pos);
+            try {
+                algo.setTriggerType(trigType);
             } finally {
                 timer.stop(pos);
             }

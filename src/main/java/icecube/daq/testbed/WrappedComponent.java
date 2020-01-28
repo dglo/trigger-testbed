@@ -5,7 +5,6 @@ import icecube.daq.io.DAQComponentOutputProcess;
 import icecube.daq.juggler.alert.AlertQueue;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.payload.IByteBufferCache;
-import icecube.daq.payload.MiscUtil;
 import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.trigger.algorithm.ITriggerAlgorithm;
 import icecube.daq.trigger.component.DAQTriggerComponent;
@@ -19,17 +18,15 @@ import java.nio.channels.Pipe;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * Base class for DAQ component wrapper.
  */
 public abstract class WrappedComponent
 {
-    private static final Logger LOG = Logger.getLogger(WrappedComponent.class);
-
-    // update hash database with new run configuration hashes
-    private static final boolean IGNORE_DB = false;
+    private static final Log LOG = LogFactory.getLog(WrappedComponent.class);
 
     private DAQTriggerComponent comp;
     private String prefix;
@@ -101,6 +98,8 @@ public abstract class WrappedComponent
     /**
      * Connect to the payload consumer.
      *
+     * @param out output engine
+     * @param outCache output buffer cache
      * @param targetDir output file directory (may not be needed)
      * @param runCfgName run configuration file name
      * @param runNumber run number
@@ -112,9 +111,12 @@ public abstract class WrappedComponent
      *
      * @return newly created payload consumer
      */
-    private Consumer connectToConsumer(File targetDir, String runCfgName,
-                                       int runNumber, int numSrcs,
-                                       int numToSkip, int numToProcess)
+    public Consumer connectToConsumer(DAQComponentOutputProcess out,
+                                      IByteBufferCache outCache,
+                                      List<ITriggerAlgorithm> algorithms,
+                                      File targetDir, String runCfgName,
+                                      int runNumber, int numSrcs,
+                                      int numToSkip, int numToProcess)
         throws IOException
     {
         Pipe outPipe = Pipe.open();
@@ -125,12 +127,9 @@ public abstract class WrappedComponent
         Pipe.SourceChannel srcOut = outPipe.source();
         srcOut.configureBlocking(true);
 
-        DAQComponentOutputProcess out = comp.getWriter();
-        out.addDataChannel(sinkOut, comp.getOutputCache(), getName());
+        out.addDataChannel(sinkOut, outCache);
 
         final int trigId;
-
-        List<ITriggerAlgorithm> algorithms = comp.getAlgorithms();
         if (algorithms == null || algorithms.size() == 0) {
             throw new IOException("List of algorithms cannot be null or" +
                                   " empty");
@@ -144,8 +143,7 @@ public abstract class WrappedComponent
 
         final String name = HashedFileName.getName(runCfgName, getSourceID(),
                                                    runNumber, trigId, numSrcs,
-                                                   numToSkip, numToProcess,
-                                                   IGNORE_DB);
+                                                   numToSkip, numToProcess);
         File outFile = new File(targetDir, name);
         if (outFile.exists()) {
             handler = new CompareHandler(outFile);
@@ -206,7 +204,7 @@ public abstract class WrappedComponent
             File[] files = SimpleHitFilter.listFiles(srcDir, hubId, runNum);
 
             PayloadFileListBridge bridge =
-                new PayloadFileListBridge(MiscUtil.formatHubID(hubId),
+                new PayloadFileListBridge(SimpleHitFilter.getHubName(hubId),
                                           files, tails[h].sink());
             bridge.setNumberToSkip(numToSkip);
             bridge.setMaximumPayloads(numToProcess);
@@ -255,11 +253,9 @@ public abstract class WrappedComponent
                                       subSrcId, ce);
             }
 
-            final int trigId = -1;
             final String name =
-                HashedFileName.getName(cfg.getName(), subSrcId, runNum, trigId,
-                                       subSrcs, numToSkip, numToProcess,
-                                       IGNORE_DB);
+                HashedFileName.getName(cfg.getName(), subSrcId, runNum,
+                                       subSrcs, numToSkip, numToProcess);
             File[] files = new File[] { new File(srcDir, name), };
 
             PayloadFileListBridge bridge =
@@ -371,7 +367,9 @@ public abstract class WrappedComponent
                                         numToSkip, numToProcess);
         }
 
-        Consumer consumer = connectToConsumer(targetDir,
+        Consumer consumer = connectToConsumer(comp.getWriter(),
+                                              comp.getOutputCache(),
+                                              comp.getAlgorithms(), targetDir,
                                               runCfg.getName(), runNum,
                                               numSrcs, numToSkip,
                                               numToProcess);

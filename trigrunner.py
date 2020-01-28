@@ -12,20 +12,6 @@ import threading
 
 from lxml import etree
 
-# main class being run
-MAIN_CLASS = "icecube.daq.testbed.TestBed"
-
-# Java max memory
-JAVA_ARGS = ("-Xmx4000m", "-Dicecube.sndaq.ignore", )
-
-# required jar files from subprojects and Maven repository
-SUBPROJECT_PKGS = ("daq-common", "splicer", "payload", "daq-io", "juggler",
-                   "trigger", "trigger-testbed")
-REPO_PKGS = (("log4j", "log4j", "1.2.12"),
-             ("org.jctools", "jctools-core", "3.0.0"),
-             ("org.xerial", "sqlite-jdbc", "3.30.1"),
-             )
-
 def find_dash_directory():
     """
     Try to locate pDAQ's `dash` directory
@@ -44,6 +30,23 @@ sys.path.append(find_dash_directory())
 
 from RunJava import JavaRunner
 
+
+###
+### This following probably don't need to be customized
+###
+
+# main class being run
+MAIN_CLASS = "icecube.daq.testbed.TestBed"
+
+# Java max memory
+JAVA_ARGS = ("-Xmx4000m", "-Dicecube.sndaq.ignore", )
+
+# required jar files from subprojects and Maven repository
+SUBPROJECT_PKGS = ("daq-common", "splicer", "payload", "daq-io", "juggler",
+                   "trigger", "trigger-testbed")
+REPO_PKGS = (("log4j", "log4j", "1.2.7"),
+             ("commons-logging", "commons-logging", "1.0.4"),
+             )
 
 class SkipList(object):
     "List of run configuration files to skip"

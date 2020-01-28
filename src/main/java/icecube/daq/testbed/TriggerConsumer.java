@@ -98,9 +98,10 @@ public class TriggerConsumer
         return domRegistry;
     }
 
-    public ConsumerHandler getHandler()
+    @Override
+    public Map<String, Integer> getQueuedInputs()
     {
-        return handler;
+        throw new Error("Unimplemented");
     }
 
     @Override
@@ -137,12 +138,6 @@ public class TriggerConsumer
     }
 
     @Override
-    public Map<String, Integer> getQueuedInputs()
-    {
-        throw new Error("Unimplemented");
-    }
-
-    @Override
     public int getSourceId()
     {
         throw new Error("Unimplemented");
@@ -163,7 +158,30 @@ public class TriggerConsumer
     @Override
     public boolean report(double clockSecs)
     {
-        throw new Error("Unimplemented");
+        String success;
+        if (numWritten > 0) {
+            success = "successfully ";
+        } else {
+            success = "";
+        }
+
+        final int numExtra = handler.getNumberExtra();
+        final int numMissed = handler.getNumberMissed();
+        final boolean sawStop = handler.sawStop();
+        System.out.println("Consumer " + success + handler.getReportVerb() +
+                           " " + numWritten + " payloads" +
+                           (numMissed == 0 ? "" : ", " + numMissed +
+                            " missed") +
+                           (numExtra == 0 ? "" : ", " + numExtra +
+                            " extra") +
+                           (numFailed == 0 ? "" : ", " + numFailed +
+                            " failed") +
+                           (forcedStop ? ", FORCED TO STOP" :
+                            (sawStop ? "" : ", not stopped")));
+
+        handler.reportTime(clockSecs);
+
+        return (numMissed == 0 && numFailed == 0 && !forcedStop);
     }
 
     @Override

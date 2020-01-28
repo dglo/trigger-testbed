@@ -13,14 +13,15 @@ import java.nio.channels.Pipe;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * Debugging data for an output channel.
  */
 class ChannelData
 {
-    private static final Logger LOG = Logger.getLogger(ChannelData.class);
+    private static final Log LOG = LogFactory.getLog(ChannelData.class);
 
     private String name;
     private java.nio.channels.Channel chan;
@@ -75,7 +76,7 @@ class ChannelData
  */
 public abstract class DAQTestUtil
 {
-    private static final Logger LOG = Logger.getLogger(DAQTestUtil.class);
+    private static final Log LOG = LogFactory.getLog(DAQTestUtil.class);
 
     /** Container for channel debugging data */
     private static ArrayList<ChannelData> chanData =
@@ -272,7 +273,7 @@ public abstract class DAQTestUtil
             if (chan.isOpen()) {
                 stopMsg.position(0);
                 chan.write(stopMsg);
-            } else if (!quietStop) {
+            } else if (LOG.isErrorEnabled() && !quietStop) {
                 LOG.error("Channel closed; cannot send stop message to " +
                          chan);
             }

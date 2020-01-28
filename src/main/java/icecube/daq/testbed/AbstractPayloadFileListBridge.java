@@ -9,7 +9,8 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.util.zip.GZIPInputStream;
 
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * An output bridge which reads payloads from a list of files qnd writes
@@ -18,8 +19,8 @@ import org.apache.log4j.Logger;
 public abstract class AbstractPayloadFileListBridge
     implements Runnable
 {
-    private static final Logger LOG =
-        Logger.getLogger(AbstractPayloadFileListBridge.class);
+    private static final Log LOG =
+        LogFactory.getLog(AbstractPayloadFileListBridge.class);
 
     private int bundleSize;
     private int writeDelay;
@@ -55,7 +56,7 @@ public abstract class AbstractPayloadFileListBridge
         this.files = files;
 
         if (files == null || files.length == 0) {
-            throw new Error("No files found for " + name);
+            throw new Error("No files found");
         }
 
         curIndex = 0;

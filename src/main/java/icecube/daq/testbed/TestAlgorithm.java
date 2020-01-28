@@ -2,14 +2,10 @@ package icecube.daq.testbed;
 
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.IPayload;
-import icecube.daq.payload.MiscUtil;
 import icecube.daq.payload.PayloadException;
-import icecube.daq.payload.PayloadRegistry;
-import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.payload.impl.DOMHit;
 import icecube.daq.payload.impl.PayloadFactory;
 import icecube.daq.payload.impl.SimpleHit;
-import icecube.daq.payload.impl.SimplerHit;
 import icecube.daq.payload.impl.TriggerRequestFactory;
 import icecube.daq.splicer.HKN1Splicer;
 import icecube.daq.splicer.SplicedAnalysis;
@@ -87,8 +83,7 @@ class PayloadFileToSplicerBridge
         }
 
         // if this isn't a simple hit, try to convert it
-        if (payload.getPayloadType() !=
-            PayloadRegistry.PAYLOAD_ID_SIMPLE_HIT &&
+        if (payload.getPayloadType() != 1 &&
             payload != TriggerManager.FLUSH_PAYLOAD)
         {
             IPayload simple = null;
@@ -136,9 +131,6 @@ public class TestAlgorithm
 
     private static final Level DEFAULT_LOGLEVEL = Level.ERROR;
     private static final int MAX_FAILURES = 4;
-    // update hash database with new run configuration hashes
-    private static final boolean IGNORE_DB = false;
-
 
     private File configDir;
     private ITriggerAlgorithm oldAlgorithm;
@@ -191,9 +183,10 @@ public class TestAlgorithm
             new PayloadFileToSplicerBridge[numSrcs];
         for (int h = 0; h < numSrcs; h++) {
             final int hubId = hubs.get(h);
-            final String hubName = MiscUtil.formatHubID(hubId);
+            final String hubName = SimpleHitFilter.getHubName(hubId);
 
             File[] files = SimpleHitFilter.listFiles(srcDir, hubId, runNumber);
+System.err.println(hubName + "*" + files.length);
 
             PayloadFileToSplicerBridge bridge =
                 new PayloadFileToSplicerBridge(hubName, files,
@@ -210,8 +203,7 @@ public class TestAlgorithm
 
     public TriggerConsumer connectToConsumer(File targetDir, String runCfgName,
                                              int runNumber, int numSrcs,
-                                             int numToSkip, int numToProcess,
-                                             boolean ignoreDB)
+                                             int numToSkip, int numToProcess)
         throws IOException
     {
         ConsumerHandler handler;
@@ -220,8 +212,7 @@ public class TestAlgorithm
         final String name = HashedFileName.getName(runCfgName,
                                                    algorithm.getSourceId(),
                                                    runNumber, trigId, numSrcs,
-                                                   numToSkip, numToProcess,
-                                                   ignoreDB);
+                                                   numToSkip, numToProcess);
         File outFile = new File(targetDir, name);
         if (outFile.exists()) {
             handler = new CompareHandler(outFile);
@@ -237,6 +228,26 @@ public class TestAlgorithm
         //consumer.start();
 
         return consumer;
+    }
+
+    private String[] listValidRunNumbers(File hitDir)
+    {
+        ArrayList<String> numbers = new ArrayList<String>();
+
+        for (String name : hitDir.list()) {
+            if (!name.startsWith("run")) {
+                continue;
+            }
+
+            File path = new File(hitDir, name);
+            if (!path.isDirectory()) {
+                continue;
+            }
+
+            numbers.add(name.substring(3));
+        }
+
+        return numbers.toArray(new String[0]);
     }
 
     /**
@@ -456,12 +467,27 @@ public class TestAlgorithm
                                    " \"-r runNumber\"");
                  usage = true;
             } else {
-                srcDir = SimpleHitFilter.findRunDirectory(runNumber);
-                if (srcDir == null) {
-                    System.err.println("Cannot find files for run " +
-                                       runNumber + " in default directory " +
-                                       SimpleHitFilter.DEFAULT_HIT_DIR);
+                File hitDir =
+                    new File(System.getenv("HOME"), "prj/simplehits");
+                if (!hitDir.isDirectory()) {
+                    System.err.println("Cannot find top-level SimpleHit" +
+                                       " directory " + hitDir);
                     usage = true;
+                } else {
+                    final String subName = String.format("run%05d", runNumber);
+                    srcDir = new File(hitDir, subName);
+                    if (!srcDir.isDirectory()) {
+                        System.err.println("Cannot find hit directory" +
+                                           " directory " + srcDir);
+                        String[] numbers = listValidRunNumbers(hitDir);
+                        if (numbers != null && numbers.length > 0) {
+                            System.err.println("Valid run numbers:");
+                            for (String number : numbers) {
+                                System.err.println("\t" + number);
+                            }
+                        }
+                        usage = true;
+                    }
                 }
             }
         }
@@ -473,7 +499,7 @@ public class TestAlgorithm
         }
 
         if (targetDir == null) {
-            targetDir = SimpleHitFilter.DEFAULT_HIT_DIR;
+            targetDir = new File(System.getenv("HOME"), "prj/simplehits");
             if (!targetDir.isDirectory()) {
                 System.err.println("Cannot find default target directory " +
                                    targetDir);
@@ -582,12 +608,9 @@ public class TestAlgorithm
             }
 
             if (maxSrcs <= 0) {
-                final int srcId = algorithm.getSourceId();
-                final String compName =
-                    SourceIdRegistry.getDAQNameFromSourceID(srcId);
                 System.err.printf("Run configuration %s does not contain" +
-                                  " any entries for component #%d (%s)\n",
-                                  runCfg.getName(), srcId, compName);
+                                  " any entries for component #%d\n",
+                                  runCfg.getName(), algorithm.getSourceId());
                 usage = true;
             } else if (numSrcs <= 0) {
                 numSrcs = maxSrcs;
@@ -636,56 +659,12 @@ public class TestAlgorithm
         for (AlgorithmStatistics stats : activity.getAlgorithmStatistics()) {
             System.out.println(stats.toString());
         }
-
-        System.err.println("-------------------- REPORT --------------------");
-        boolean rtnval = report(consumer, deathmatch, now - startSecs);
+        boolean rtnval = consumer.report(now - startSecs);
         if (deathmatch != null) {
             System.out.println(deathmatch.getStats());
         }
 
         return rtnval;
-    }
-
-    private static boolean report(TriggerConsumer consumer,
-                                  AlgorithmDeathmatch deathmatch,
-                                  double clockSecs)
-    {
-        final int numWritten, numFailed;
-        if (deathmatch == null) {
-            numWritten = consumer.getNumberWritten();
-            numFailed = consumer.getNumberFailed();
-        } else {
-            numWritten = deathmatch.getNumberWritten();
-            numFailed = deathmatch.getNumberFailed();
-        }
-
-        String success;
-        if (numWritten > 0) {
-            success = "successfully ";
-        } else {
-            success = "";
-        }
-
-        final ConsumerHandler handler = consumer.getHandler();
-        final int numExtra = handler.getNumberExtra();
-        final int numMissed = handler.getNumberMissed();
-        final boolean forcedStop = consumer.forcedStop();
-        final boolean sawStop = handler.sawStop();
-
-        System.out.println("Consumer " + success + handler.getReportVerb() +
-                           " " + numWritten + " payloads" +
-                           (numMissed == 0 ? "" : ", " + numMissed +
-                            " missed") +
-                           (numExtra == 0 ? "" : ", " + numExtra +
-                            " extra") +
-                           (numFailed == 0 ? "" : ", " + numFailed +
-                            " failed") +
-                           (forcedStop ? ", FORCED TO STOP" :
-                            (sawStop ? "" : ", not stopped")));
-
-        handler.reportTime(clockSecs);
-
-        return (numMissed == 0 && numFailed == 0 && !forcedStop);
     }
 
     /**
@@ -696,9 +675,8 @@ public class TestAlgorithm
     private boolean run()
         throws IOException
     {
-        // initialize DOM registry for simple hit classes
+        // initialize SimpleHit DOM registry
         SimpleHit.setDOMRegistry(registry);
-        SimplerHit.setDOMRegistry(registry);
 
         AlgorithmDeathmatch deathmatch = null;
         if (oldAlgorithm != null) {
@@ -708,7 +686,7 @@ public class TestAlgorithm
 
         TriggerConsumer consumer =
             connectToConsumer(targetDir, runCfg.getName(), runNumber, numSrcs,
-                              numToSkip, numToProcess, IGNORE_DB);
+                              numToSkip, numToProcess);
         algorithm.setTriggerManager(consumer);
         algorithm.setTriggerCollector(consumer);
 

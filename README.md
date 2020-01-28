@@ -82,29 +82,31 @@ An example would be
 ### Converting HitSpool files to trigger hit files
 
 The `dash/SimplifyHits.py` script runs the `icecube.daq.io.HitSimplifier` Java
-code which throws away hits which would not be passed to the local triggers,
-then converts the remaining hits to the 38-byte SimpleHit format and writes
-them to a file.
+code which filters out hits which would not be passed to the local triggers,
+converts them to the 38-byte SimpleHit format, then writes them to a file.
 
 ### `test-trigger.py`
 
-`test_trigger.py` runs a single trigger.  For example, to send the first 10,000
-hits from run 120151 to the in-ice trigger, using the trigger configuration
-parameters from the `sps-IC86-remove-Carrot-and-Leif_Eriksson-V218` run
-configuration:
+`test_trigger.py` runs a single trigger, for example:
 
-    test-trigger.py -T IniceTriggerComponent \
+    test-trigger.py -C IniceTriggerComponent \
 	    -c sps-IC86-remove-Carrot-and-Leif_Eriksson-V218 -r 120151 \
 		-t ~/prj/simplehits -n 10000
 
-This script is not much more than a wrapper around
+It's not much more than a wrapper around
 `icecube.daq.testbed.TestBed`.
 
-### `test-all-configs.py`
+In the above case, it will run the in-ice trigger component with the algorithms
+specified by the trigger configuration pointed to in the
+`sps-IC86-remove-Carrot-and-Leif_Eriksson-V218` run configuration file.  It
+will use the first 10000 hits from the files in `~/prj/simplehits/run120151`
+as input.
 
-The more exhaustive `test-all-configs.py` script uses all the
+### `test-all-triggers.py`
+
+The more exhaustive `test-all-triggers.py` script uses all the
 configurations in the run configuration directory to run all three
-trigger components with a small and a large set of hits.  This takes a
+trigger components with a couple of different numbers of hits.  This takes a
 **LONG** time, so it only prints a brief report and saves the output of
 any failing runs to be examined later.
 
@@ -130,30 +132,3 @@ If no matching file exists, it will create one.
 In the above example, the `-O` option could also be used to start up an
 `OldSimpleMajorityTrigger` algorithm alongside the `SimpleMajorityTrigger`
 algorithm and compare the results coming out of both to make sure they match.
-
-### `compare-existing.py`
-
-The `compare-existing.py` script finds all the output files from previous runs
-(`$HOME/prj/simplehits/rc*.dat`), then reruns the trigger with the settings
-encoded in the `rc` file name and compares the old and new results.
-
-
-## Miscellaneous notes
-
-* This testbed was originally written while refactoring the trigger code to
-  run each algorithm in a separate thread.  To ensure they were identical,
-  the old and new implementations were run in parallel, with the older
-  implementation moved to the `icecube.daq.oldtrigger` package.
-
-  The ability to save the generated requests to specially named files and
-  compare runs against previously saved data data was added later.  The
-  "save to file" method uses fewer CPU resources and less hackery so it's a
-  better approach in general.
-
-  I've left the `oldtrigger` code in place because it might be useful for
-  future benchmarking/speedup efforts
-
-* The testbed has code to pause input if the incoming queue grows too large.
-  This was _vital_ when first developing the testbed because the incoming
-  queue would frequently fill available memory, making the developer's laptop
-  unusable.

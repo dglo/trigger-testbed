@@ -10,7 +10,6 @@ import icecube.daq.payload.impl.ReadoutRequestElement;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -226,8 +225,8 @@ public class PayloadComparison
             return false;
         }
 
-        if (!compareLong("CompareRREDOM", exp.getDOMID().longValue(),
-                         got.getDOMID().longValue(), reportError))
+        if (!compareLong("CompareRREDOM", exp.getDomID().longValue(),
+                         got.getDomID().longValue(), reportError))
         {
             return false;
         }
@@ -305,7 +304,7 @@ public class PayloadComparison
             return false;
         }
 
-        boolean ignoreLastTimeErrors = false; // exp.getTriggerType() == throughputType;
+        boolean ignoreLastTimeErrors = exp.getTriggerType() == throughputType;
         if (!compareReadoutRequest(exp.getReadoutRequest(),
                                    got.getReadoutRequest(),
                                    checkUID, ignoreLastTimeErrors,
@@ -314,8 +313,8 @@ public class PayloadComparison
             return false;
         }
 
-        Collection<IPayload> expList;
-        Collection<IPayload> gotList;
+        List expList;
+        List gotList;
         try {
             expList = exp.getPayloads();
             gotList = got.getPayloads();
@@ -348,8 +347,9 @@ public class PayloadComparison
                   (exp.getTriggerType() == -1 ||
                    exp.getTriggerType() == throughputType));
 
-            ArrayList<IPayload> gotCopy = new ArrayList<IPayload>(gotList);
-            for (IPayload expPay : expList) {
+            ArrayList gotCopy = new ArrayList(gotList);
+            for (int i = 0; i < expList.size(); i++) {
+                IPayload expPay = (IPayload) expList.get(i);
 
                 boolean found = false;
                 if (expPay instanceof ITriggerRequestPayload) {
@@ -357,7 +357,7 @@ public class PayloadComparison
                         (ITriggerRequestPayload) expPay;
 
                     for (int j = 0; j < gotCopy.size(); j++) {
-                        IPayload gotPay = gotCopy.get(j);
+                        IPayload gotPay = (IPayload) gotCopy.get(j);
                         if (gotPay instanceof ITriggerRequestPayload) {
                             ITriggerRequestPayload gotReq =
                                 (ITriggerRequestPayload) gotPay;
@@ -377,7 +377,7 @@ public class PayloadComparison
                     IHitPayload expHit = (IHitPayload) expPay;
 
                     for (int j = 0; j < gotCopy.size(); j++) {
-                        IPayload gotPay = gotCopy.get(j);
+                        IPayload gotPay = (IPayload) gotCopy.get(j);
                         if (gotPay instanceof IHitPayload) {
                             IHitPayload gotHit = (IHitPayload) gotPay;
 
@@ -473,7 +473,7 @@ public class PayloadComparison
         buf.append(tr.toString());
         buf.append(getRdoutReqString(tr.getReadoutRequest(), indent));
 
-        Collection<IPayload> list;
+        List list;
         try {
             list = tr.getPayloads();
         } catch (Exception ex) {
@@ -483,14 +483,14 @@ public class PayloadComparison
         }
 
         if (list != null) {
-            for (IPayload pay : list) {
-                if (pay instanceof ITriggerRequestPayload) {
-                    ITriggerRequestPayload kid = (ITriggerRequestPayload) pay;
+            for (Object obj : list) {
+                if (obj instanceof ITriggerRequestPayload) {
+                    ITriggerRequestPayload kid = (ITriggerRequestPayload) obj;
                     buf.append('\n').append(INDENT_STEP).
                         append(getTrigReqString(kid, indent + INDENT_STEP));
                 } else {
                     buf.append("\n").append(INDENT_STEP).append(INDENT_STEP).
-                        append(indent).append(pay);
+                        append(indent).append(obj);
                 }
             }
         }

@@ -12,7 +12,8 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.ByteBuffer;
 
-import org.apache.log4j.Logger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * Compare new payloads against a previously generated file.
@@ -22,7 +23,7 @@ public class CompareHandler
     implements ConsumerHandler
 {
     /** Log object for this class */
-    private static final Logger LOG = Logger.getLogger(CompareHandler.class);
+    private static final Log LOG = LogFactory.getLog(CompareHandler.class);
 
     private PayloadByteReader rdr;
     private int payloadCount;
