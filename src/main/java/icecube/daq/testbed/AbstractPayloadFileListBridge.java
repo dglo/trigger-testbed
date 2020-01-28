@@ -56,7 +56,7 @@ public abstract class AbstractPayloadFileListBridge
         this.files = files;
 
         if (files == null || files.length == 0) {
-            throw new Error("No files found");
+            throw new Error("No files found for " + name);
         }
 
         curIndex = 0;

@@ -127,7 +127,7 @@ public abstract class WrappedComponent
         Pipe.SourceChannel srcOut = outPipe.source();
         srcOut.configureBlocking(true);
 
-        out.addDataChannel(sinkOut, outCache);
+        out.addDataChannel(sinkOut, outCache, getName());
 
         final int trigId;
         if (algorithms == null || algorithms.size() == 0) {

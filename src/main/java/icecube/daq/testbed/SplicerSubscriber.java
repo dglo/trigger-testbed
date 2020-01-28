@@ -121,6 +121,17 @@ class SplicerSubscriber
     }
 
     /**
+     * Add a list of payloads to the queue.
+     *
+     * @param payloads list of payload
+     */
+    @Override
+    public void pushAll(List<IPayload> payloads)
+    {
+        throw new Error("New payloads should only be added by the splicer!");
+    }
+
+    /**
      * Get the number of queued payloads
      *
      * @return size of internal queue
