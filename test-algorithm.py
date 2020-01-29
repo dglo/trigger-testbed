@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 
 import os
-import platform
 import sys
 
 # main class being run
 MAIN_CLASS = "icecube.daq.testbed.TestAlgorithm"
 
 # Java max memory
-JAVA_ARGS = "-Xmx4000m"
+JAVA_ARGS = ("-Xmx4000m", )
 
 # required jar files from subprojects and Maven repository
 SUBPROJECT_PKGS = ("daq-common", "splicer", "payload", "daq-io", "juggler",

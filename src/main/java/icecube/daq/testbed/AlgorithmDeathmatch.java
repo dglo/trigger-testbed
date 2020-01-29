@@ -13,6 +13,7 @@ import icecube.daq.trigger.control.ITriggerManager;
 import icecube.daq.trigger.control.Interval;
 import icecube.daq.trigger.control.PayloadSubscriber;
 import icecube.daq.trigger.control.SubscribedList;
+import icecube.daq.trigger.exceptions.ConfigException;
 import icecube.daq.trigger.exceptions.IllegalParameterValueException;
 import icecube.daq.trigger.exceptions.TriggerException;
 import icecube.daq.trigger.exceptions.UnknownParameterException;
@@ -218,6 +219,13 @@ public class AlgorithmDeathmatch
                 timer.stop(pos);
             }
         }
+    }
+
+    @Override
+    public void checkTriggerType(int type)
+        throws ConfigException
+    {
+        oldAlgorithm.checkTriggerType(type);
     }
 
     @Override
@@ -972,25 +980,6 @@ public class AlgorithmDeathmatch
             timer.start(pos);
             try {
                 algo.setTriggerName(name);
-            } finally {
-                timer.stop(pos);
-            }
-        }
-    }
-
-    @Override
-    public void setTriggerType(int trigType)
-    {
-        final int pos = 98;
-
-        final boolean oldFirst = random.nextBoolean();
-        for (int i = 0; i < 2; i++) {
-            ITriggerAlgorithm algo = getRandomAlgorithm(oldFirst, i);
-            CodeTimer timer = getMatchingTimer(algo);
-
-            timer.start(pos);
-            try {
-                algo.setTriggerType(trigType);
             } finally {
                 timer.stop(pos);
             }

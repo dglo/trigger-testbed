@@ -2,10 +2,13 @@ package icecube.daq.testbed;
 
 import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.IPayload;
+import icecube.daq.payload.MiscUtil;
 import icecube.daq.payload.PayloadException;
+import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.payload.impl.DOMHit;
 import icecube.daq.payload.impl.PayloadFactory;
 import icecube.daq.payload.impl.SimpleHit;
+import icecube.daq.payload.impl.SimplerHit;
 import icecube.daq.payload.impl.TriggerRequestFactory;
 import icecube.daq.splicer.HKN1Splicer;
 import icecube.daq.splicer.SplicedAnalysis;
@@ -183,10 +186,9 @@ public class TestAlgorithm
             new PayloadFileToSplicerBridge[numSrcs];
         for (int h = 0; h < numSrcs; h++) {
             final int hubId = hubs.get(h);
-            final String hubName = SimpleHitFilter.getHubName(hubId);
+            final String hubName = MiscUtil.formatHubID(hubId);
 
             File[] files = SimpleHitFilter.listFiles(srcDir, hubId, runNumber);
-System.err.println(hubName + "*" + files.length);
 
             PayloadFileToSplicerBridge bridge =
                 new PayloadFileToSplicerBridge(hubName, files,
@@ -608,9 +610,12 @@ System.err.println(hubName + "*" + files.length);
             }
 
             if (maxSrcs <= 0) {
+                final int srcId = algorithm.getSourceId();
+                final String compName =
+                    SourceIdRegistry.getDAQNameFromSourceID(srcId);
                 System.err.printf("Run configuration %s does not contain" +
-                                  " any entries for component #%d\n",
-                                  runCfg.getName(), algorithm.getSourceId());
+                                  " any entries for component #%d (%s)\n",
+                                  runCfg.getName(), srcId, compName);
                 usage = true;
             } else if (numSrcs <= 0) {
                 numSrcs = maxSrcs;
@@ -659,12 +664,56 @@ System.err.println(hubName + "*" + files.length);
         for (AlgorithmStatistics stats : activity.getAlgorithmStatistics()) {
             System.out.println(stats.toString());
         }
-        boolean rtnval = consumer.report(now - startSecs);
+
+        System.err.println("-------------------- REPORT --------------------");
+        boolean rtnval = report(consumer, deathmatch, now - startSecs);
         if (deathmatch != null) {
             System.out.println(deathmatch.getStats());
         }
 
         return rtnval;
+    }
+
+    private static boolean report(TriggerConsumer consumer,
+                                  AlgorithmDeathmatch deathmatch,
+                                  double clockSecs)
+    {
+        final int numWritten, numFailed;
+        if (deathmatch == null) {
+            numWritten = consumer.getNumberWritten();
+            numFailed = consumer.getNumberFailed();
+        } else {
+            numWritten = deathmatch.getNumberWritten();
+            numFailed = deathmatch.getNumberFailed();
+        }
+
+        String success;
+        if (numWritten > 0) {
+            success = "successfully ";
+        } else {
+            success = "";
+        }
+
+        final ConsumerHandler handler = consumer.getHandler();
+        final int numExtra = handler.getNumberExtra();
+        final int numMissed = handler.getNumberMissed();
+        final boolean forcedStop = consumer.forcedStop();
+        final boolean sawStop = handler.sawStop();
+
+        System.out.println("Consumer " + success + handler.getReportVerb() +
+                           " " + numWritten + " payloads" +
+                           (numMissed == 0 ? "" : ", " + numMissed +
+                            " missed") +
+                           (numExtra == 0 ? "" : ", " + numExtra +
+                            " extra") +
+                           (numFailed == 0 ? "" : ", " + numFailed +
+                            " failed") +
+                           (forcedStop ? ", FORCED TO STOP" :
+                            (sawStop ? "" : ", not stopped")));
+
+        handler.reportTime(clockSecs);
+
+        return (numMissed == 0 && numFailed == 0 && !forcedStop);
     }
 
     /**
@@ -675,8 +724,9 @@ System.err.println(hubName + "*" + files.length);
     private boolean run()
         throws IOException
     {
-        // initialize SimpleHit DOM registry
+        // initialize DOM registry for simple hit classes
         SimpleHit.setDOMRegistry(registry);
+        SimplerHit.setDOMRegistry(registry);
 
         AlgorithmDeathmatch deathmatch = null;
         if (oldAlgorithm != null) {

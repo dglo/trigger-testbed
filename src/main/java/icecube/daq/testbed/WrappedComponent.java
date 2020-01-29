@@ -5,6 +5,7 @@ import icecube.daq.io.DAQComponentOutputProcess;
 import icecube.daq.juggler.alert.AlertQueue;
 import icecube.daq.juggler.component.DAQCompException;
 import icecube.daq.payload.IByteBufferCache;
+import icecube.daq.payload.MiscUtil;
 import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.trigger.algorithm.ITriggerAlgorithm;
 import icecube.daq.trigger.component.DAQTriggerComponent;
@@ -98,8 +99,6 @@ public abstract class WrappedComponent
     /**
      * Connect to the payload consumer.
      *
-     * @param out output engine
-     * @param outCache output buffer cache
      * @param targetDir output file directory (may not be needed)
      * @param runCfgName run configuration file name
      * @param runNumber run number
@@ -111,12 +110,9 @@ public abstract class WrappedComponent
      *
      * @return newly created payload consumer
      */
-    public Consumer connectToConsumer(DAQComponentOutputProcess out,
-                                      IByteBufferCache outCache,
-                                      List<ITriggerAlgorithm> algorithms,
-                                      File targetDir, String runCfgName,
-                                      int runNumber, int numSrcs,
-                                      int numToSkip, int numToProcess)
+    private Consumer connectToConsumer(File targetDir, String runCfgName,
+                                       int runNumber, int numSrcs,
+                                       int numToSkip, int numToProcess)
         throws IOException
     {
         Pipe outPipe = Pipe.open();
@@ -127,9 +123,12 @@ public abstract class WrappedComponent
         Pipe.SourceChannel srcOut = outPipe.source();
         srcOut.configureBlocking(true);
 
-        out.addDataChannel(sinkOut, outCache, getName());
+        DAQComponentOutputProcess out = comp.getWriter();
+        out.addDataChannel(sinkOut, comp.getOutputCache(), getName());
 
         final int trigId;
+
+        List<ITriggerAlgorithm> algorithms = comp.getAlgorithms();
         if (algorithms == null || algorithms.size() == 0) {
             throw new IOException("List of algorithms cannot be null or" +
                                   " empty");
@@ -204,7 +203,7 @@ public abstract class WrappedComponent
             File[] files = SimpleHitFilter.listFiles(srcDir, hubId, runNum);
 
             PayloadFileListBridge bridge =
-                new PayloadFileListBridge(SimpleHitFilter.getHubName(hubId),
+                new PayloadFileListBridge(MiscUtil.formatHubID(hubId),
                                           files, tails[h].sink());
             bridge.setNumberToSkip(numToSkip);
             bridge.setMaximumPayloads(numToProcess);
@@ -367,9 +366,7 @@ public abstract class WrappedComponent
                                         numToSkip, numToProcess);
         }
 
-        Consumer consumer = connectToConsumer(comp.getWriter(),
-                                              comp.getOutputCache(),
-                                              comp.getAlgorithms(), targetDir,
+        Consumer consumer = connectToConsumer(targetDir,
                                               runCfg.getName(), runNum,
                                               numSrcs, numToSkip,
                                               numToProcess);

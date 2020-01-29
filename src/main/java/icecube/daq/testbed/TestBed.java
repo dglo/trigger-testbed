@@ -1,6 +1,8 @@
 package icecube.daq.testbed;
 
 import icecube.daq.common.ANSIEscapeCode;
+import icecube.daq.payload.impl.SimpleHit;
+import icecube.daq.payload.impl.SimplerHit;
 import icecube.daq.trigger.exceptions.ConfigException;
 import icecube.daq.util.DOMRegistryFactory;
 import icecube.daq.util.IDOMRegistry;
@@ -64,6 +66,10 @@ public class TestBed
      */
     public boolean run()
     {
+        // initialize DOM registry for simple hit classes
+        SimpleHit.setDOMRegistry(registry);
+        SimplerHit.setDOMRegistry(registry);
+
         // set log level
         Logger.getRootLogger().setLevel(logLevel);
         APPENDER.setLevel(logLevel);
@@ -110,19 +116,19 @@ public class TestBed
         String compName = null;
         String runCfgName = null;
 
+        boolean getProp = false;
+
         boolean usage = false;
         for (int i = 0; i < args.length; i++) {
+            if (getProp) {
+                setPropertyFromString(args[i]);
+                getProp = false;
+                continue;
+            }
+
             if (args[i].length() > 1 && args[i].charAt(0) == '-') {
                 switch(args[i].charAt(1)) {
                 case 'C':
-                    i++;
-                    compName = args[i];
-                    break;
-                case 'c':
-                    i++;
-                    runCfgName = args[i];
-                    break;
-                case 'D':
                     i++;
                     File tmpCfgDir = new File(args[i]);
                     if (!tmpCfgDir.isDirectory()) {
@@ -131,6 +137,17 @@ public class TestBed
                         usage = true;
                     } else {
                         configDir = tmpCfgDir;
+                    }
+                    break;
+                case 'c':
+                    i++;
+                    runCfgName = args[i];
+                    break;
+                case 'D':
+                    if (args[i].length() == 2) {
+                        getProp = true;
+                    } else {
+                        setPropertyFromString(args[i].substring(2));
                     }
                     break;
                 case 'd':
@@ -257,6 +274,10 @@ public class TestBed
                         break;
                     }
 
+                    break;
+                case 'T':
+                    i++;
+                    compName = args[i];
                     break;
                 case 't':
                     i++;
@@ -385,9 +406,8 @@ public class TestBed
 
         if (usage) {
             String usageMsg = "java " + getClass().getName() +
-                " [-C componentClass]" +
+                " [-C configDir]" +
                 " [-c runConfig]" +
-                " [-D configDir]" +
                 " [-d sourceDirectory]" +
                 " [-F maxFailures]" +
                 " [-h numberOfSources]" +
@@ -397,6 +417,7 @@ public class TestBed
                 " [-r runNumber]" +
                 " [-S(plicerDump)]" +
                 " [-s numberToSkip]" +
+                " [-T componentClass]" +
                 " [-t targetDirectory]" +
                 " [-v(erbose)]" +
                 " [-w(aitForInput)]" +
@@ -430,6 +451,22 @@ public class TestBed
         }
         System.out.print(ANSIEscapeCode.OFF);
         System.out.println("=====================================");
+    }
+
+    private void setPropertyFromString(String propStr)
+    {
+        String name, value;
+
+        final int equals = propStr.indexOf('=');
+        if (equals < 0) {
+            name = propStr;
+            value = "";
+        } else {
+            name = propStr.substring(0, equals);
+            value = propStr.substring(equals + 1);
+        }
+
+        System.setProperty(name, value);
     }
 
     /**

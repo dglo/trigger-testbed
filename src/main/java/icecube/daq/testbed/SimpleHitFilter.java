@@ -1,5 +1,6 @@
 package icecube.daq.testbed;
 
+import icecube.daq.payload.MiscUtil;
 import icecube.daq.payload.SourceIdRegistry;
 
 import java.io.File;
@@ -13,40 +14,21 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * A complex object which can be used to filter and sort hit file names.
+ * Identify all files for a single in-ice or icetop hub
  */
 public class SimpleHitFilter
     implements Comparator, FilenameFilter
 {
-    private static final Pattern simplePat =
-        Pattern.compile("^(\\S*)hub(\\d+)_simplehits_(\\d+)_(\\d+)_(\\d+)" +
-                        "_(\\d+)\\.(\\S+)$");
+    private static final int NO_NUMBER = Integer.MIN_VALUE;
 
-    private int runNum;
-    private String hubBase;
+    private int hubNumber;
+    private String hubName;
 
-    /**
-     * Create a hit file filter.
-     *
-     * @param hubId (1-86 or 201-211)
-     * @param runNum run number
-     */
-    SimpleHitFilter(int hubId, int runNum)
+    SimpleHitFilter(int hubNumber)
         throws IllegalArgumentException
     {
-        this(getHubName(hubId), runNum);
-    }
-
-    /**
-     * Create a hit file filter.
-     *
-     * @param hubName hub name ("ichub##" or "ithub##")
-     * @param runNum run number
-     */
-    SimpleHitFilter(String hubName, int runNum)
-    {
-        this.runNum = runNum;
-        this.hubBase = hubName;
+        this.hubNumber = hubNumber;
+        this.hubName = MiscUtil.formatHubID(hubNumber);
     }
 
     /**
@@ -56,31 +38,36 @@ public class SimpleHitFilter
      */
     public boolean accept(File dir, String name)
     {
-        if (name.indexOf("_simplehits_") > 0) {
-            if (name.startsWith(hubBase)) {
-                return true;
-            } else if (hubBase.startsWith("ic") &&
-                       name.startsWith(hubBase.substring(2)))
-            {
-                return true;
-            }
-        }
-
-        if (name.startsWith("i3live") && name.endsWith(hubBase)) {
+        // we've got a hitspool directory
+        if (name.startsWith("HitSpool-")) {
             return true;
         }
 
-        return false;
-    }
+        // find the hub name within the file name
+        int nameStart = -1;
+        int nameLen = -1;
+        nameStart = name.indexOf(hubName);
+        if (nameStart >= 0) {
+            nameLen = hubName.length();
+        } else if (hubName.startsWith("ic")) {
+            nameStart = name.indexOf(hubName.substring(2));
+            if (nameStart >= 0) {
+                if (nameStart >= 2 &&
+                    name.substring(nameStart - 2, 2).equals("it"))
+                {
+                    return false;
+                }
 
-    /**
-     * Base filename
-     *
-     * @return filename
-     */
-    public String basename()
-    {
-        return hubBase;
+                nameLen = hubName.length() - 2;
+            }
+        }
+
+        // if there's no hub name, reject the file
+        if (nameLen < 0) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -116,64 +103,46 @@ public class SimpleHitFilter
         return n1 - n2;
     }
 
-    /**
-     * Do the objects implement the same class?
-     *
-     * @return <tt>true</tt> if they are the same class
-     */
-    @Override
-    public boolean equals(Object obj)
-    {
-        if (obj == null) {
-            return false;
-        }
-
-        return obj.getClass().getName().equals(getClass().getName());
-    }
-
-    private static final int NO_NUMBER = Integer.MIN_VALUE;
-
     private int extractFileNumber(String name)
     {
         final String hsBase = "HitSpool";
 
+        String numStr;
+
         // find start of numeric string
-        final int idx;
-        if (name.startsWith(hubBase)) {
-            idx = hubBase.length();
+        int idx;
+        if (name.startsWith(hubName)) {
+            idx = hubName.length();
         } else if (name.startsWith(hsBase)) {
             idx = hsBase.length();
+        } else if (name.startsWith("ic" + hubName)) {
+            idx = hubName.length() + 2;
         } else {
             idx = -1;
         }
 
-        String numStr;
-        if (idx > 0) {
-            // find end of numeric string
-            int end = name.indexOf("_", idx + 1);
-            if (end < 0) {
-                end = name.indexOf(".", idx + 1);
-                if (end < 0) {
-                    throw new Error("Cannot find end of file number in \"" +
-                                    name + "\" (hub \"" + hubBase +
-                                    "\" hs \"" + hsBase + "\")");
-                }
-            }
-
-            // extract numeric string
-            numStr = name.substring(idx + 1, end);
-        } else {
-            Matcher mtch = simplePat.matcher(name);
-            if (mtch.matches()) {
-                numStr = mtch.group(4);
-            } else {
-                numStr = null;
-            }
-        }
-
-        if (numStr == null) {
+        if (idx <= 0) {
             return NO_NUMBER;
         }
+
+        final String simpleStr = "_simplehits_";
+        if (name.indexOf(simpleStr) == idx) {
+            idx += simpleStr.length() - 1;
+        }
+
+        // find end of numeric string
+        int end = name.indexOf("_", idx + 1);
+        if (end < 0) {
+            end = name.indexOf(".", idx + 1);
+            if (end < 0) {
+                throw new Error("Cannot find end of file number in" +
+                                "  \"" + name + "\" (hub \"" +
+                                hubName + "\" hs \"" + hsBase + "\")");
+            }
+        }
+
+        // extract numeric string
+        numStr = name.substring(idx + 1, end);
 
         // convert string to integer value
         try {
@@ -181,63 +150,61 @@ public class SimpleHitFilter
         } catch (NumberFormatException nfe) {
             throw new Error("Cannot parse file number \"" + numStr +
                             "\" from \"" + name +
-                            "\" (hub \"" + hubBase +
+                            "\" (hub \"" + hubName +
                             "\" hs \"" + hsBase + "\")");
         }
     }
 
-    /*
-     * Return the hub name associated with this ID.
-     *
-     * @param hubId (1-86 or 201-211)
-     *
-     * @return hub name
-     *
-     * @throws IOException if the hubId is invalid
-     */
-    public static String getHubName(int hubId)
-        throws IllegalArgumentException
+    public String getHubName()
     {
-        if (hubId > 0 && hubId < SourceIdRegistry.ICETOP_ID_OFFSET) {
-            return String.format("ichub%02d", hubId);
-        } else if (hubId > SourceIdRegistry.ICETOP_ID_OFFSET) {
-            return String.format("ithub%02d", hubId -
-                                 SourceIdRegistry.ICETOP_ID_OFFSET);
-        }
-
-        throw new IllegalArgumentException("Bad hub ID " + hubId);
+        return hubName;
     }
 
-    public static File[] listFiles(File srcDir, int hubId, int runNum)
+    public static File[] listFiles(File topDir, int hubId, int runNumber)
         throws IOException
     {
-        SimpleHitFilter filter = new SimpleHitFilter(hubId, runNum);
+        File srcDir = topDir;
 
-        File runDir = new File(srcDir, String.format("run%06d", runNum));
-
-        File[] hitfiles;
-        if (runDir.exists()) {
-            hitfiles = runDir.listFiles(filter);
+        // if there's a run subdirectory under the source directory, add that
+        final String runStr = Integer.toString(runNumber);
+        File subDir = new File(topDir, runStr);
+        if (subDir.isDirectory()) {
+            srcDir = subDir;
         } else {
-            hitfiles = srcDir.listFiles(filter);
-        }
-
-        if (hitfiles.length == 0) {
-            String runStr;
-            if (runNum <= 0) {
-                runStr = "";
-            } else {
-                runStr = " run " + runNum;
+            subDir = new File(topDir, "run" + runStr);
+            if (subDir.isDirectory()) {
+                srcDir = subDir;
             }
-
-            String msg =
-                String.format("Cannot find hit files for%s %s",
-                              runStr, filter.basename());
-            throw new IOException(msg);
         }
 
-        // make sure files are in the correct order
-        filter.sort(hitfiles);
+try{throw new Error("??runNum param??");}catch(Error e){e.printStackTrace();}
+        return listFiles(srcDir, hubId);
+    }
+
+    public static File[] listFiles(File topDir, int hubId)
+        throws IOException
+    {
+        SimpleHitFilter filter = new SimpleHitFilter(hubId);
+
+        File srcDir = topDir;
+
+        // if there's a hub subdirectory under the source directory, add that
+        final String hubName = MiscUtil.formatHubID(hubId);
+        File subDir = new File(topDir, hubName);
+        if (subDir.isDirectory()) {
+            srcDir = subDir;
+        } else if (hubName.startsWith("ic")) {
+            subDir = new File(srcDir, hubName.substring(2));
+            if (subDir.isDirectory()) {
+                srcDir = subDir;
+            }
+        }
+
+        File[] hitfiles = srcDir.listFiles(filter);
+        if (hitfiles.length > 0) {
+            // make sure files are in the correct order
+            filter.sort(hitfiles);
+        }
 
         return hitfiles;
     }
@@ -250,15 +217,5 @@ public class SimpleHitFilter
     public void sort(File[] files)
     {
         Arrays.sort(files, this);
-    }
-
-    /**
-     * Sort the list of files.
-     *
-     * @param files list of files
-     */
-    public void sort(List<File> files)
-    {
-        Collections.sort(files, this);
     }
 }
