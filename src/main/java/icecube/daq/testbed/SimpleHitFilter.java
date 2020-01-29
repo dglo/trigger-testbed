@@ -177,7 +177,6 @@ public class SimpleHitFilter
             }
         }
 
-try{throw new Error("??runNum param??");}catch(Error e){e.printStackTrace();}
         return listFiles(srcDir, hubId);
     }
 
