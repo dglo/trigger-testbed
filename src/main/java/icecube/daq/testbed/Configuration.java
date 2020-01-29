@@ -288,6 +288,9 @@ class ConfigData
 
 public class Configuration
 {
+    // maximum trigger type in 2019 is 24
+    private static final int MAX_TRIGGER_TYPES = 100;
+
     private File file;
     private String trigCfgName;
     private List<Integer> stringHubs;
@@ -800,8 +803,7 @@ public class Configuration
 
     public void setTriggerNames()
     {
-        // maximum trigger type in 2019 is 24
-        String[] typeNames = new String[100];
+        String[] typeNames = new String[MAX_TRIGGER_TYPES];
         for (AlgorithmData ad : algorithmData) {
             ITriggerAlgorithm obj;
             try {
