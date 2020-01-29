@@ -4,8 +4,6 @@ import icecube.daq.io.DAQComponentOutputProcess;
 import icecube.daq.juggler.alert.AlertQueue;
 import icecube.daq.payload.IPayload;
 import icecube.daq.payload.ITriggerRequestPayload;
-import icecube.daq.payload.impl.SimpleHit;
-import icecube.daq.payload.impl.SimplerHit;
 import icecube.daq.payload.impl.TriggerRequestFactory;
 import icecube.daq.splicer.Splicer;
 import icecube.daq.trigger.algorithm.AlgorithmStatistics;
@@ -182,27 +180,6 @@ public class AlgorithmDeathmatch
     {
         this.newAlgorithm = newAlgorithm;
         this.oldAlgorithm = oldAlgorithm;
-    }
-
-    private ITriggerAlgorithm getRandomAlgorithm(boolean oldFirst, int index)
-    {
-        if (oldFirst) {
-            return (index == 0 ? oldAlgorithm : newAlgorithm);
-        }
-
-        return (index == 0 ? newAlgorithm : oldAlgorithm);
-    }
-
-    private CodeTimer getMatchingTimer(ITriggerAlgorithm algorithm)
-    {
-        if (algorithm == oldAlgorithm) {
-            return oldTimer;
-        } else if (algorithm != newAlgorithm) {
-            throw new Error("Unknown algorithm \"" +
-                            algorithm.getClass().getName() + "\"");
-        }
-
-        return newTimer;
     }
 
     @Override
@@ -397,6 +374,18 @@ public class AlgorithmDeathmatch
         return oldLatency;
     }
 
+    private CodeTimer getMatchingTimer(ITriggerAlgorithm algorithm)
+    {
+        if (algorithm == oldAlgorithm) {
+            return oldTimer;
+        } else if (algorithm != newAlgorithm) {
+            throw new Error("Unknown algorithm \"" +
+                            algorithm.getClass().getName() + "\"");
+        }
+
+        return newTimer;
+    }
+
     @Override
     public String getMonitoringName()
     {
@@ -465,6 +454,15 @@ public class AlgorithmDeathmatch
     public ITriggerAlgorithm getOldAlgorithm()
     {
         return oldAlgorithm;
+    }
+
+    private ITriggerAlgorithm getRandomAlgorithm(boolean oldFirst, int index)
+    {
+        if (oldFirst) {
+            return (index == 0 ? oldAlgorithm : newAlgorithm);
+        }
+
+        return (index == 0 ? newAlgorithm : oldAlgorithm);
     }
 
     @Override
@@ -708,6 +706,17 @@ public class AlgorithmDeathmatch
         }
 
         return oldVal;
+    }
+
+    /**
+     * Has this algorithm finished with all incoming payloads?
+     *
+     * @return <tt>true</tt> if the algorithm has processed all its data
+     */
+    @Override
+    public boolean isStopped()
+    {
+        return subscriber.isStopped();
     }
 
     @Override
@@ -977,6 +986,7 @@ public class AlgorithmDeathmatch
         }
     }
 
+    @Override
     public void unsubscribe(SubscribedList list)
     {
         if (subscriber == null) {
