@@ -4,6 +4,7 @@ import icecube.daq.payload.IByteBufferCache;
 import icecube.daq.payload.IPayload;
 import icecube.daq.payload.MiscUtil;
 import icecube.daq.payload.PayloadException;
+import icecube.daq.payload.PayloadRegistry;
 import icecube.daq.payload.SourceIdRegistry;
 import icecube.daq.payload.impl.DOMHit;
 import icecube.daq.payload.impl.PayloadFactory;
@@ -86,7 +87,8 @@ class PayloadFileToSplicerBridge
         }
 
         // if this isn't a simple hit, try to convert it
-        if (payload.getPayloadType() != 1 &&
+        if (payload.getPayloadType() !=
+            PayloadRegistry.PAYLOAD_ID_SIMPLE_HIT &&
             payload != TriggerManager.FLUSH_PAYLOAD)
         {
             IPayload simple = null;

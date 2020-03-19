@@ -4,7 +4,7 @@ import icecube.daq.common.DAQCmdInterface;
 import icecube.daq.io.BufferWriter;
 import icecube.daq.io.DispatchException;
 import icecube.daq.io.PayloadByteReader;
-import icecube.daq.payload.ILoadablePayload;
+import icecube.daq.payload.IPayload;
 import icecube.daq.payload.MiscUtil;
 import icecube.daq.payload.PayloadException;
 import icecube.daq.payload.PayloadRegistry;
@@ -336,9 +336,9 @@ public class ConvertHitSpool
 
             long numPayloads = 0;
             for (ByteBuffer buf : rdr) {
-                ILoadablePayload pay;
+                IPayload pay;
                 try {
-                    pay = (ILoadablePayload) factory.getPayload(buf, 0);
+                    pay = (IPayload) factory.getPayload(buf, 0);
                     if (!(pay instanceof DOMHit)) {
                         System.err.println("Payload #" + numPayloads +
                                            " is not a hit: " +
@@ -779,9 +779,9 @@ public class ConvertHitSpool
                     break;
                 }
 
-                ILoadablePayload pay;
+                IPayload pay;
                 try {
-                    pay = (ILoadablePayload) factory.getPayload(buf, 0);
+                    pay = (IPayload) factory.getPayload(buf, 0);
                     if (!(pay instanceof DOMHit)) {
                         System.err.println("Payload #" + numPayloads +
                                            " is not a hit: " +

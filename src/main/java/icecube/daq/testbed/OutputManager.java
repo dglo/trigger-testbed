@@ -3,8 +3,8 @@ package icecube.daq.testbed;
 import icecube.daq.io.DAQComponentOutputProcess;
 import icecube.daq.io.OutputChannel;
 import icecube.daq.payload.IByteBufferCache;
+import icecube.daq.payload.IPayload;
 import icecube.daq.payload.ITriggerRequestPayload;
-import icecube.daq.payload.IWriteablePayload;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -63,7 +63,7 @@ public class OutputManager
         }
     }
 
-    private void writePayload(IWriteablePayload payload)
+    private void writePayload(IPayload payload)
     {
         int bufLen = payload.length();
 
@@ -77,7 +77,7 @@ public class OutputManager
 
         // write trigger to a ByteBuffer
         try {
-            ((IWriteablePayload) payload).writePayload(false, 0, buf);
+            payload.writePayload(false, 0, buf);
         } catch (IOException ioe) {
             LOG.error("Couldn't create payload", ioe);
             buf = null;

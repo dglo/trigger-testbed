@@ -225,8 +225,8 @@ public class PayloadComparison
             return false;
         }
 
-        if (!compareLong("CompareRREDOM", exp.getDomID().longValue(),
-                         got.getDomID().longValue(), reportError))
+        if (!compareLong("CompareRREDOM", exp.getDOMID().longValue(),
+                         got.getDOMID().longValue(), reportError))
         {
             return false;
         }
