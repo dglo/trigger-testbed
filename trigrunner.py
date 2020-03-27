@@ -45,7 +45,7 @@ JAVA_ARGS = ("-Xmx4000m", "-Dicecube.sndaq.ignore", )
 SUBPROJECT_PKGS = ("daq-common", "splicer", "payload", "daq-io", "juggler",
                    "trigger", "trigger-testbed")
 REPO_PKGS = (("log4j", "log4j", "1.2.7"),
-             ("commons-logging", "commons-logging", "1.0.4"),
+             ("org.jctools", "jctools-core", "3.0.0"),
              )
 
 class SkipList(object):

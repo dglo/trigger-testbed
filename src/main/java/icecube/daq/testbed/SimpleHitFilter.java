@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -19,6 +20,9 @@ import java.util.regex.Pattern;
 public class SimpleHitFilter
     implements Comparator, FilenameFilter
 {
+    public static final File DEFAULT_HIT_DIR =
+        new File(System.getenv("HOME"), "prj/simplehits");
+
     private static final int NO_NUMBER = Integer.MIN_VALUE;
 
     private int hubNumber;
@@ -155,6 +159,48 @@ public class SimpleHitFilter
         }
     }
 
+    public static final File findRunDirectory(int runNumber)
+    {
+        return findRunDirectory(DEFAULT_HIT_DIR, runNumber);
+    }
+
+    public static final File findRunDirectory(File topDir, int runNumber)
+    {
+        if (!topDir.isDirectory()) {
+            System.err.println("Cannot find top-level SimpleHit directory " +
+                               topDir);
+        } else {
+            if (runNumber > 0) {
+                final String runStr = String.format("%05d", runNumber);
+
+                // check for "run######"
+                final File runDir = new File(topDir, "run" + runStr);
+                if (runDir.isDirectory()) {
+                    return runDir;
+                }
+
+                // check for old-style "######"
+                final File numDir = new File(topDir, runStr);
+                if (numDir.isDirectory()) {
+                    return numDir;
+                }
+
+                System.err.println("Cannot find run number " + runStr +
+                                   " in " + topDir);
+            }
+
+            String[] valid = listValidRunNumbers(topDir);
+            if (valid.length == 0) {
+                System.err.println("No run data found in " + topDir + "!");
+            } else {
+                String runs = String.join(", ", Arrays.asList(valid));
+                System.err.println("Valid run numbers: " + runs);
+            }
+        }
+
+        return null;
+    }
+
     public String getHubName()
     {
         return hubName;
@@ -206,6 +252,36 @@ public class SimpleHitFilter
         }
 
         return hitfiles;
+    }
+
+    public static final String[] listValidRunNumbers(File topDir)
+    {
+        ArrayList<String> numbers = new ArrayList<String>();
+
+        for (String name : topDir.list()) {
+            if (name.startsWith("run")) {
+                File path = new File(topDir, name);
+                if (path.isDirectory()) {
+                    numbers.add(name.substring(3));
+                }
+            } else {
+                int runNum;
+                try {
+                    runNum = Integer.parseInt(name);
+                } catch (NumberFormatException nfe) {
+                    runNum = -1;
+                }
+
+                if (runNum > 0) {
+                    File path = new File(topDir, name);
+                    if (path.isDirectory()) {
+                        numbers.add(name.substring(3));
+                    }
+                }
+            }
+        }
+
+        return numbers.toArray(new String[0]);
     }
 
     /**

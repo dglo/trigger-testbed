@@ -136,3 +136,17 @@ algorithm and compare the results coming out of both to make sure they match.
 The `compare-existing.py` script finds all the output files from previous runs
 (`$HOME/prj/simplehits/rc*.dat`), then reruns the trigger with the settings
 encoded in the `rc` file name and compares the old and new results.
+
+
+## Miscellaneous notes
+
+* This testbed was originally written while refactoring the trigger code to
+  run each algorithm in a separate thread.  To ensure they were identical,
+  the old and new implementations were run in parallel, with the older
+  implementation moved to the `icecube.daq.oldtrigger` package.
+
+  The ability to save the generated requests to specially named files and
+  compare runs against previously saved data data was added later.  The
+  "save to file" method uses fewer CPU resources and less hackery so it's a
+  better approach in general, but I've left the `oldtrigger` alternative in
+  case it's useful in the future.

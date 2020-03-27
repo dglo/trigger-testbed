@@ -234,26 +234,6 @@ public class TestAlgorithm
         return consumer;
     }
 
-    private String[] listValidRunNumbers(File hitDir)
-    {
-        ArrayList<String> numbers = new ArrayList<String>();
-
-        for (String name : hitDir.list()) {
-            if (!name.startsWith("run")) {
-                continue;
-            }
-
-            File path = new File(hitDir, name);
-            if (!path.isDirectory()) {
-                continue;
-            }
-
-            numbers.add(name.substring(3));
-        }
-
-        return numbers.toArray(new String[0]);
-    }
-
     /**
      * Process command-line arguments.
      *
@@ -471,27 +451,12 @@ public class TestAlgorithm
                                    " \"-r runNumber\"");
                  usage = true;
             } else {
-                File hitDir =
-                    new File(System.getenv("HOME"), "prj/simplehits");
-                if (!hitDir.isDirectory()) {
-                    System.err.println("Cannot find top-level SimpleHit" +
-                                       " directory " + hitDir);
+                srcDir = SimpleHitFilter.findRunDirectory(runNumber);
+                if (srcDir == null) {
+                    System.err.println("Cannot find files for run " +
+                                       runNumber + " in default directory " +
+                                       SimpleHitFilter.DEFAULT_HIT_DIR);
                     usage = true;
-                } else {
-                    final String subName = String.format("run%05d", runNumber);
-                    srcDir = new File(hitDir, subName);
-                    if (!srcDir.isDirectory()) {
-                        System.err.println("Cannot find hit directory" +
-                                           " directory " + srcDir);
-                        String[] numbers = listValidRunNumbers(hitDir);
-                        if (numbers != null && numbers.length > 0) {
-                            System.err.println("Valid run numbers:");
-                            for (String number : numbers) {
-                                System.err.println("\t" + number);
-                            }
-                        }
-                        usage = true;
-                    }
                 }
             }
         }
@@ -503,7 +468,7 @@ public class TestAlgorithm
         }
 
         if (targetDir == null) {
-            targetDir = new File(System.getenv("HOME"), "prj/simplehits");
+            targetDir = SimpleHitFilter.DEFAULT_HIT_DIR;
             if (!targetDir.isDirectory()) {
                 System.err.println("Cannot find default target directory " +
                                    targetDir);

@@ -39,7 +39,7 @@ public class TestBed
     private int maxFailures = MAX_FAILURES;
     private Configuration runCfg;
     private int runNumber;
-    private File srcDir;
+    private File runDir;
     private File targetDir;
     private boolean verbose;
     private boolean waitForInput;
@@ -60,53 +60,6 @@ public class TestBed
     }
 
     /**
-     * Perform a DAQ run.
-     *
-     * @return <tt>true</tt> if the run was successful
-     */
-    public boolean run()
-    {
-        // initialize DOM registry for simple hit classes
-        SimpleHit.setDOMRegistry(registry);
-        SimplerHit.setDOMRegistry(registry);
-
-        // set log level
-        Logger.getRootLogger().setLevel(logLevel);
-        APPENDER.setLevel(logLevel);
-
-        if (waitForInput) {
-            System.out.print("Hit [RETURN] to start: ");
-            System.out.flush();
-
-            try {
-                BufferedReader bufferRead =
-                    new BufferedReader(new InputStreamReader(System.in));
-                bufferRead.readLine();
-            } catch (IOException ioe) {
-                // ignore errors
-            }
-        }
-
-        System.err.println("Running " + comp);
-
-        boolean rtnval;
-        try {
-            rtnval = comp.run(runCfg, numSrcs, runNumber, srcDir, numToProcess,
-                              numToSkip, maxFailures, targetDir, monOutFile,
-                              verbose, dumpSplicer);
-        } catch (Exception ex) {
-            System.err.println("Run failed for " + runCfg.getName());
-            ex.printStackTrace();
-            rtnval = false;
-        } finally {
-            System.err.println("Destroying " + comp);
-            comp.destroy();
-        }
-
-        return rtnval;
-    }
-
-    /**
      * Process command-line arguments.
      *
      * @param args command-line arguments
@@ -115,6 +68,7 @@ public class TestBed
     {
         String compName = null;
         String runCfgName = null;
+        File srcDir = SimpleHitFilter.DEFAULT_HIT_DIR;
 
         boolean getProp = false;
 
@@ -153,12 +107,13 @@ public class TestBed
                 case 'd':
                     i++;
                     File tmpSource = new File(args[i]);
-                    if (!tmpSource.isDirectory()) {
+                    if (tmpSource.isDirectory()) {
+                        srcDir = tmpSource;
+                    } else {
                         System.err.println("Bad source directory \"" +
                                            tmpSource + "\"");
+                        srcDir = null;
                         usage = true;
-                    } else {
-                        srcDir = tmpSource;
                     }
                     break;
                 case 'F':
@@ -307,14 +262,9 @@ public class TestBed
             }
         }
 
-        if (srcDir == null && runNumber != 0) {
-            String tmpPath =
-                String.format("prj/simplehits/run%05d", runNumber);
-            srcDir = new File(System.getenv("HOME"), tmpPath);
-            if (!srcDir.isDirectory()) {
-                System.err.println("Cannot find default source directory " +
-                                   srcDir);
-                System.err.println("Please specify source directory (-s)");
+        if (srcDir != null) {
+            runDir = SimpleHitFilter.findRunDirectory(srcDir, runNumber);
+            if (runDir == null) {
                 usage = true;
             }
         }
@@ -326,7 +276,7 @@ public class TestBed
         }
 
         if (targetDir == null) {
-            targetDir = new File(System.getenv("HOME"), "prj/simplehits");
+            targetDir = SimpleHitFilter.DEFAULT_HIT_DIR;
             if (!targetDir.isDirectory()) {
                 System.err.println("Cannot find default target directory " +
                                    targetDir);
@@ -408,12 +358,13 @@ public class TestBed
             String usageMsg = "java " + getClass().getName() +
                 " [-C configDir]" +
                 " [-c runConfig]" +
+                " [-D javaProperty(=value)]" +
                 " [-d sourceDirectory]" +
                 " [-F maxFailures]" +
                 " [-h numberOfSources]" +
                 " [-l logLevel]" +
-                " [-n numberToProcess]" +
                 " [-m monitoringOutputFile]" +
+                " [-n numberToProcess]" +
                 " [-r runNumber]" +
                 " [-S(plicerDump)]" +
                 " [-s numberToSkip]" +
@@ -437,7 +388,7 @@ public class TestBed
 
         System.out.print(ANSIEscapeCode.BG_GREEN + ANSIEscapeCode.FG_BLUE);
         System.out.println("Component: " + comp.getName());
-        System.out.println("Data source directory: " + srcDir);
+        System.out.println("Data source directory: " + runDir);
         System.out.println("Data target directory: " + targetDir);
         System.out.println("Number of sources: " + numSrcs);
         System.out.println("Number of payloads to skip: " + numToSkip);
@@ -451,6 +402,53 @@ public class TestBed
         }
         System.out.print(ANSIEscapeCode.OFF);
         System.out.println("=====================================");
+    }
+
+    /**
+     * Perform a DAQ run.
+     *
+     * @return <tt>true</tt> if the run was successful
+     */
+    public boolean run()
+    {
+        // initialize DOM registry for simple hit classes
+        SimpleHit.setDOMRegistry(registry);
+        SimplerHit.setDOMRegistry(registry);
+
+        // set log level
+        Logger.getRootLogger().setLevel(logLevel);
+        APPENDER.setLevel(logLevel);
+
+        if (waitForInput) {
+            System.out.print("Hit [RETURN] to start: ");
+            System.out.flush();
+
+            try {
+                BufferedReader bufferRead =
+                    new BufferedReader(new InputStreamReader(System.in));
+                bufferRead.readLine();
+            } catch (IOException ioe) {
+                // ignore errors
+            }
+        }
+
+        System.err.println("Running " + comp);
+
+        boolean rtnval;
+        try {
+            rtnval = comp.run(runCfg, numSrcs, runNumber, runDir, numToProcess,
+                              numToSkip, maxFailures, targetDir, monOutFile,
+                              verbose, dumpSplicer);
+        } catch (Exception ex) {
+            System.err.println("Run failed for " + runCfg.getName());
+            ex.printStackTrace();
+            rtnval = false;
+        } finally {
+            System.err.println("Destroying " + comp);
+            comp.destroy();
+        }
+
+        return rtnval;
     }
 
     private void setPropertyFromString(String propStr)

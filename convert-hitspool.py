@@ -16,7 +16,7 @@ JAVA_ARGS = ""
 SUBPROJECT_PKGS = ("daq-common", "splicer", "payload", "daq-io", "juggler",
                    "trigger", "trigger-testbed")
 REPO_PKGS = [("log4j", "log4j", "1.2.17"),
-             ("commons-logging", "commons-logging", "1.1")]
+             ("org.jctools", "jctools-core", "3.0.0")]
 
 
 def find_dash_directory():
