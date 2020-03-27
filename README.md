@@ -148,5 +148,12 @@ encoded in the `rc` file name and compares the old and new results.
   The ability to save the generated requests to specially named files and
   compare runs against previously saved data data was added later.  The
   "save to file" method uses fewer CPU resources and less hackery so it's a
-  better approach in general, but I've left the `oldtrigger` alternative in
-  case it's useful in the future.
+  better approach in general.
+
+  I've left the `oldtrigger` code in place because it might be useful for
+  future benchmarking/speedup efforts
+
+* The testbed has code to pause input if the incoming queue grows too large.
+  This was _vital_ when first developing the testbed because the incoming
+  queue would frequently fill available memory, making the developer's laptop
+  unusable.
