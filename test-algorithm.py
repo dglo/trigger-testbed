@@ -14,6 +14,7 @@ SUBPROJECT_PKGS = ("daq-common", "splicer", "payload", "daq-io", "juggler",
                    "trigger", "trigger-testbed")
 REPO_PKGS = (("log4j", "log4j", "1.2.12"),
              ("org.jctools", "jctools-core", "3.0.0"),
+             ("org.xerial", "sqlite-jdbc", "3.30.1"),
              )
 
 def find_dash_directory():
@@ -33,6 +34,7 @@ def find_dash_directory():
 sys.path.append(find_dash_directory())
 
 from RunJava import JavaRunner
+
 
 if __name__ == "__main__":
     runner = JavaRunner(MAIN_CLASS, SUBPROJECT_PKGS, REPO_PKGS)

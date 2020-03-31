@@ -136,6 +136,9 @@ public class TestAlgorithm
 
     private static final Level DEFAULT_LOGLEVEL = Level.ERROR;
     private static final int MAX_FAILURES = 4;
+    // update hash database with new run configuration hashes
+    private static final boolean IGNORE_DB = false;
+
 
     private File configDir;
     private ITriggerAlgorithm oldAlgorithm;
@@ -207,7 +210,8 @@ public class TestAlgorithm
 
     public TriggerConsumer connectToConsumer(File targetDir, String runCfgName,
                                              int runNumber, int numSrcs,
-                                             int numToSkip, int numToProcess)
+                                             int numToSkip, int numToProcess,
+                                             boolean ignoreDB)
         throws IOException
     {
         ConsumerHandler handler;
@@ -216,7 +220,8 @@ public class TestAlgorithm
         final String name = HashedFileName.getName(runCfgName,
                                                    algorithm.getSourceId(),
                                                    runNumber, trigId, numSrcs,
-                                                   numToSkip, numToProcess);
+                                                   numToSkip, numToProcess,
+                                                   ignoreDB);
         File outFile = new File(targetDir, name);
         if (outFile.exists()) {
             handler = new CompareHandler(outFile);
@@ -703,7 +708,7 @@ public class TestAlgorithm
 
         TriggerConsumer consumer =
             connectToConsumer(targetDir, runCfg.getName(), runNumber, numSrcs,
-                              numToSkip, numToProcess);
+                              numToSkip, numToProcess, IGNORE_DB);
         algorithm.setTriggerManager(consumer);
         algorithm.setTriggerCollector(consumer);
 

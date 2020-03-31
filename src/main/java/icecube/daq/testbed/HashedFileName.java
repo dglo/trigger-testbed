@@ -4,6 +4,7 @@ import icecube.daq.payload.SourceIdRegistry;
 
 import java.math.BigInteger;
 import java.security.MessageDigest;
+import java.sql.SQLException;
 
 /**
  * Build a compact filename representation of the relevant run quantities.
@@ -71,57 +72,17 @@ public abstract class HashedFileName
      * @param numSrcs number of sources used in the run
      * @param numToSkip number of initial payloads skipped in the run
      * @param numToProcess number of payloads processed in the run
-     *
-     * @return hashed filename
-     */
-    public static final String getName(String runCfgName, int srcId,
-                                       int runNumber, int numSrcs,
-                                       int numToSkip, int numToProcess)
-    {
-        return getName(runCfgName, srcId, runNumber, -1, numSrcs, numToSkip,
-                       numToProcess, false);
-    }
-
-    /**
-     * Build a hashed filename.
-     *
-     * @param runCfgName run configuration filename
-     * @param srcId component source ID
-     * @param runNumber run number
-     * @param numSrcs number of sources used in the run
-     * @param numToSkip number of initial payloads skipped in the run
-     * @param numToProcess number of payloads processed in the run
+     * @param ignoreDB if <tt>true</tt> do not update the configuration hash DB
      *
      * @return hashed filename
      */
     public static final String getName(String runCfgName, int srcId,
                                        int runNumber, int trigId, int numSrcs,
-                                       int numToSkip, int numToProcess)
+                                       int numToSkip, int numToProcess,
+                                       boolean ignoreDB)
     {
         return getName(runCfgName, srcId, runNumber, trigId, numSrcs,
-                       numToSkip, numToProcess, false);
-    }
-
-    /**
-     * Build a hashed filename.
-     *
-     * @param runCfgName run configuration filename
-     * @param srcId component source ID
-     * @param runNumber run number
-     * @param numSrcs number of sources used in the run
-     * @param numToSkip number of initial payloads skipped in the run
-     * @param numToProcess number of payloads processed in the run
-     * @param useOldHash if <tt>true</tt> use old hash algorithm
-     *
-     * @return hashed filename
-     */
-    public static final String getName(String runCfgName, int srcId,
-                                       int runNumber, int numSrcs,
-                                       int numToSkip, int numToProcess,
-                                       boolean useOldHash)
-    {
-        return getName(runCfgName, srcId, runNumber, -1, numSrcs, numToSkip,
-                      numToProcess, useOldHash);
+                       numToSkip, numToProcess, ignoreDB, false);
     }
 
     /**
@@ -141,13 +102,23 @@ public abstract class HashedFileName
     public static final String getName(String runCfgName, int srcId,
                                        int runNumber, int trigId, int numSrcs,
                                        int numToSkip, int numToProcess,
-                                       boolean useOldHash)
+                                       boolean ignoreDB, boolean useOldHash)
     {
-        String cfgHash;
+        final String cfgHash;
         if (useOldHash) {
             cfgHash = oldHashName(runCfgName);
         } else {
             cfgHash = hashName(runCfgName);
+        }
+
+        if (!ignoreDB) {
+            try {
+                ConfigHashDB.stashHash(SimpleHitFilter.DEFAULT_HIT_DIR,
+                                       runCfgName, cfgHash, null);
+            } catch (SQLException sex) {
+                throw new Error("Cannot save hashed \"" + runCfgName +
+                                "\" to database", sex);
+            }
         }
 
         String compType = getShortComponent(srcId);

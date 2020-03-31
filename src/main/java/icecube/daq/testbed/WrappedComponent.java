@@ -28,6 +28,9 @@ public abstract class WrappedComponent
 {
     private static final Logger LOG = Logger.getLogger(WrappedComponent.class);
 
+    // update hash database with new run configuration hashes
+    private static final boolean IGNORE_DB = false;
+
     private DAQTriggerComponent comp;
     private String prefix;
 
@@ -141,7 +144,8 @@ public abstract class WrappedComponent
 
         final String name = HashedFileName.getName(runCfgName, getSourceID(),
                                                    runNumber, trigId, numSrcs,
-                                                   numToSkip, numToProcess);
+                                                   numToSkip, numToProcess,
+                                                   IGNORE_DB);
         File outFile = new File(targetDir, name);
         if (outFile.exists()) {
             handler = new CompareHandler(outFile);
@@ -251,9 +255,11 @@ public abstract class WrappedComponent
                                       subSrcId, ce);
             }
 
+            final int trigId = -1;
             final String name =
-                HashedFileName.getName(cfg.getName(), subSrcId, runNum,
-                                       subSrcs, numToSkip, numToProcess);
+                HashedFileName.getName(cfg.getName(), subSrcId, runNum, trigId,
+                                       subSrcs, numToSkip, numToProcess,
+                                       IGNORE_DB);
             File[] files = new File[] { new File(srcDir, name), };
 
             PayloadFileListBridge bridge =
